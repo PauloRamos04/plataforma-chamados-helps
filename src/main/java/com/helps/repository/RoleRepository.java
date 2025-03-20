@@ -1,9 +1,10 @@
 package com.helps.repository;
 
-import com.helps.domain.model.Mensagem;
+import com.helps.domain.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface MensagemRepository extends JpaRepository<Mensagem, Long> {
+public interface RoleRepository extends JpaRepository<Role, Long> {
+    Role findByName(String name);
 }
