@@ -28,32 +28,27 @@ public class AdminUserConfig implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
-        // Busca a role ADMIN no banco de dados
-        var roleAdmin = roleRepository.findByName(Role.Values.ADMIN.name());
-
-        // Se a role ADMIN não existir, cria uma nova
-        if (roleAdmin == null) {
-            roleAdmin = new Role();
-            roleAdmin.setName(Role.Values.ADMIN.name());
-            roleRepository.save(roleAdmin);
-            System.out.println("Role ADMIN criada com sucesso.");
+    public void run(String... args) {
+        // Criar todas as roles necessárias
+        for (Role.Values roleValue : Role.Values.values()) {
+            roleRepository.findByName(roleValue.name()).orElseGet(() -> {
+                Role role = new Role();
+                role.setName(roleValue.name());
+                roleRepository.save(role);
+                System.out.println("Role " + roleValue.name() + " criada.");
+                return role;
+            });
         }
 
-        // Busca o usuário admin no banco de dados
-        var userAdmin = userRepository.findByUsername("admin");
-
-        Role finalRoleAdmin = roleAdmin;
-        userAdmin.ifPresentOrElse(
-                user -> {
-                    System.out.println("Admin já existe.");
-                },
+        // Criar usuário admin se não existir
+        userRepository.findByUsername("admin").ifPresentOrElse(
+                user -> System.out.println("Admin já existe."),
                 () -> {
-                    // Cria um novo usuário admin
+                    var roleAdmin = roleRepository.findByName(Role.Values.ADMIN.name()).orElseThrow();
                     var user = new User();
                     user.setUsername("admin");
                     user.setPassword(passwordEncoder.encode("123"));
-                    user.setRoles(Set.of(finalRoleAdmin)); // Garantimos que roleAdmin não é null
+                    user.setRoles(Set.of(roleAdmin));
                     userRepository.save(user);
                     System.out.println("Admin criado com sucesso.");
                 }
