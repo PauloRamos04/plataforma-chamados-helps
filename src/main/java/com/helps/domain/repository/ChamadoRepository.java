@@ -1,4 +1,4 @@
-package com.helps.domain.repository.repository;
+package com.helps.domain.repository;
 
 import com.helps.domain.model.Chamado;
 import org.springframework.data.jpa.repository.JpaRepository;
