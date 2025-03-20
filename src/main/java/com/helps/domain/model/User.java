@@ -1,6 +1,6 @@
 package com.helps.domain.model;
 
-import com.helps.controller.dto.LoginRequest;
+import com.helps.dto.LoginRequest;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 

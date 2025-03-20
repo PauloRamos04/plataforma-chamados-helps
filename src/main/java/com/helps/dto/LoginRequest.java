@@ -1,4 +1,4 @@
-package com.helps.controller.dto;
+package com.helps.dto;
 
 public record LoginRequest(String username, String password){
 

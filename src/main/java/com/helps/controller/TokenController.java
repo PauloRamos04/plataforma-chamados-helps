@@ -1,7 +1,7 @@
 package com.helps.controller;
 
-import com.helps.controller.dto.LoginRequest;
-import com.helps.controller.dto.LoginResponse;
+import com.helps.dto.LoginRequest;
+import com.helps.dto.LoginResponse;
 import com.helps.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
