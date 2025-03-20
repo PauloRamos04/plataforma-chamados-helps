@@ -2,7 +2,6 @@ package com.helps.domain.model;
 
 import jakarta.persistence.*;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 
 
@@ -64,19 +63,19 @@ public class Chamado {
         this.dataCriacao = dataCriacao;
     }
 
-    public Usuario getSolicitante() {
+    public User getSolicitante() {
         return solicitante;
     }
 
-    public void setSolicitante(Usuario solicitante) {
+    public void setSolicitante(User solicitante) {
         this.solicitante = solicitante;
     }
 
-    public Usuario getHelper() {
+    public User getHelper() {
         return helper;
     }
 
-    public void setHelper(Usuario helper) {
+    public void setHelper(User helper) {
         this.helper = helper;
     }
 
@@ -84,10 +83,10 @@ public class Chamado {
 
     @ManyToOne
     @JoinColumn(name = "solicitante_id")
-    private Usuario solicitante;
+    private User solicitante;
 
     @ManyToOne
     @JoinColumn(name = "helper_id")
-    private Usuario helper;
+    private User helper;
 
 }

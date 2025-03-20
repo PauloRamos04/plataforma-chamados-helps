@@ -48,16 +48,16 @@ public class Mensagem {
         this.chamado = chamado;
     }
 
-    public Usuario getRemetente() {
+    public User getRemetente() {
         return remetente;
     }
 
-    public void setRemetente(Usuario remetente) {
+    public void setRemetente(User remetente) {
         this.remetente = remetente;
     }
 
     @ManyToOne
     @JoinColumn(name = "remetente_id")
-    private Usuario remetente;
+    private User remetente;
 
 }

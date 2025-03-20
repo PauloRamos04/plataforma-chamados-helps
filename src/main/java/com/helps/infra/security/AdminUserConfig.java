@@ -1,9 +1,9 @@
 package com.helps.infra.security;
 
 import com.helps.domain.model.Role;
-import com.helps.domain.model.Usuario;
+import com.helps.domain.model.User;
 import com.helps.repository.RoleRepository;
-import com.helps.repository.UsuarioRepository;
+import com.helps.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
@@ -15,11 +15,11 @@ import java.util.Set;
 public class AdminUserConfig implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
-    private final UsuarioRepository userRepository;
+    private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
     public AdminUserConfig(RoleRepository roleRepository,
-                           UsuarioRepository userRepository,
+                           UserRepository userRepository,
                            BCryptPasswordEncoder passwordEncoder) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -50,7 +50,7 @@ public class AdminUserConfig implements CommandLineRunner {
                 },
                 () -> {
                     // Cria um novo usuário admin
-                    var user = new Usuario();
+                    var user = new User();
                     user.setUsername("admin");
                     user.setPassword(passwordEncoder.encode("123"));
                     user.setRoles(Set.of(finalRoleAdmin)); // Garantimos que roleAdmin não é null

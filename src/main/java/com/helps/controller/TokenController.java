@@ -2,7 +2,7 @@ package com.helps.controller;
 
 import com.helps.controller.dto.LoginRequest;
 import com.helps.controller.dto.LoginResponse;
-import com.helps.repository.UsuarioRepository;
+import com.helps.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,20 +20,20 @@ public class TokenController {
 
     private final JwtEncoder jwtEncoder;
 
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    public TokenController(JwtEncoder jwtEncoder, UsuarioRepository usuarioRepository, BCryptPasswordEncoder bCryptPasswordEncoder){
+    public TokenController(JwtEncoder jwtEncoder, UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder){
         this.jwtEncoder = jwtEncoder;
-        this.usuarioRepository = usuarioRepository;
+        this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest){
 
-        var user = usuarioRepository.findByUsername(loginRequest.username());
+        var user = userRepository.findByUsername(loginRequest.username());
 
         if(user.isEmpty() || !user.get().isLoginCorrect(loginRequest, bCryptPasswordEncoder)){
             throw new BadCredentialsException("user or password is invalid!");

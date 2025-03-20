@@ -2,15 +2,13 @@ package com.helps.domain.model;
 
 import com.helps.controller.dto.LoginRequest;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Set;
 
 @Entity
 @Table(name = "tb_users")
-public class Usuario {
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
