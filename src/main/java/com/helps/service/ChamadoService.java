@@ -1,7 +1,7 @@
 package com.helps.service;
 
 import com.helps.domain.model.Chamado;
-import com.helps.domain.model.repository.ChamadoRepository;
+import com.helps.domain.repository.repository.ChamadoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

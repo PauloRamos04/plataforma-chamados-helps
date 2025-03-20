@@ -2,8 +2,8 @@ package com.helps.infra.security;
 
 import com.helps.domain.model.Role;
 import com.helps.domain.model.User;
-import com.helps.domain.model.repository.RoleRepository;
-import com.helps.domain.model.repository.UserRepository;
+import com.helps.domain.repository.repository.RoleRepository;
+import com.helps.domain.repository.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;

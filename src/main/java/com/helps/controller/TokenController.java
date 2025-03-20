@@ -2,7 +2,7 @@ package com.helps.controller;
 
 import com.helps.dto.LoginRequest;
 import com.helps.dto.LoginResponse;
-import com.helps.domain.model.repository.UserRepository;
+import com.helps.domain.repository.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
