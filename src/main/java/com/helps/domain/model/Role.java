@@ -3,21 +3,29 @@ package com.helps.domain.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tb_roles")
+@Table(name = "roles")
 public class Role {
+
+    public enum Values {
+        ADMIN,
+        OPERADOR,
+        HELPER,
+        USUARIO
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "role_id")
-    private Long roleId;
+    private Long id;
+
+    @Column(nullable = false, unique = true)
     private String name;
 
-    public Long getRoleId() {
-        return roleId;
+    public Long getId() {
+        return id;
     }
 
-    public void setRoleId(Long roleId) {
-        this.roleId = roleId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -26,23 +34,5 @@ public class Role {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public enum Values {
-
-        ADMIN(1L),
-        HELPER(2L),
-
-        OPERADOR(3L);
-
-        long roleId;
-
-        Values(long roleId) {
-            this.roleId = roleId;
-        }
-
-        public long getRoleId() {
-            return roleId;
-        }
     }
 }

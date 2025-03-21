@@ -1,20 +1,29 @@
 package com.helps.domain.model;
 
 import jakarta.persistence.*;
-
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "mensagens")
 public class Mensagem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String mensagem;
-    private Date dataEnvio;
 
     @ManyToOne
-    @JoinColumn(name = "chamado_id")
+    @JoinColumn(name = "chamado_id", nullable = false)
     private Chamado chamado;
+
+    @ManyToOne
+    @JoinColumn(name = "remetente_id", nullable = false)
+    private User remetente;
+
+    @Column(nullable = false, length = 2000)
+    private String conteudo;
+
+    @Column(name = "data_envio", nullable = false)
+    private LocalDateTime dataEnvio;
 
     public Long getId() {
         return id;
@@ -22,22 +31,6 @@ public class Mensagem {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getMensagem() {
-        return mensagem;
-    }
-
-    public void setMensagem(String mensagem) {
-        this.mensagem = mensagem;
-    }
-
-    public Date getDataEnvio() {
-        return dataEnvio;
-    }
-
-    public void setDataEnvio(Date dataEnvio) {
-        this.dataEnvio = dataEnvio;
     }
 
     public Chamado getChamado() {
@@ -56,8 +49,19 @@ public class Mensagem {
         this.remetente = remetente;
     }
 
-    @ManyToOne
-    @JoinColumn(name = "remetente_id")
-    private User remetente;
+    public String getConteudo() {
+        return conteudo;
+    }
 
+    public void setConteudo(String conteudo) {
+        this.conteudo = conteudo;
+    }
+
+    public LocalDateTime getDataEnvio() {
+        return dataEnvio;
+    }
+
+    public void setDataEnvio(LocalDateTime dataEnvio) {
+        this.dataEnvio = dataEnvio;
+    }
 }

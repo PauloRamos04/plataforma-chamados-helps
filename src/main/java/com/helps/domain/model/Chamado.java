@@ -1,19 +1,47 @@
 package com.helps.domain.model;
 
 import jakarta.persistence.*;
-
-import java.util.Date;
-
+import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "chamados")
 public class Chamado {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String tipo;
-    private String categoria;
-    private String status;
+
+    @Column(nullable = false)
+    private String titulo;
+
+    @Column(nullable = false, length = 1000)
     private String descricao;
+
+    @Column(nullable = false)
+    private String status;
+
+    @Column(nullable = false)
+    private String categoria;
+
+    @Column(nullable = false)
+    private String tipo;
+
+    @Column(name = "data_abertura")
+    private LocalDateTime dataAbertura;
+
+    @Column(name = "data_inicio")
+    private LocalDateTime dataInicio;
+
+    @Column(name = "data_fechamento")
+    private LocalDateTime dataFechamento;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private User usuario;
+
+    @ManyToOne
+    @JoinColumn(name = "helper_id")
+    private User helper;
 
     public Long getId() {
         return id;
@@ -23,28 +51,12 @@ public class Chamado {
         this.id = id;
     }
 
-    public String getTipo() {
-        return tipo;
+    public String getTitulo() {
+        return titulo;
     }
 
-    public void setTipo(String tipo) {
-        this.tipo = tipo;
-    }
-
-    public String getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(String categoria) {
-        this.categoria = categoria;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
     }
 
     public String getDescricao() {
@@ -55,20 +67,36 @@ public class Chamado {
         this.descricao = descricao;
     }
 
-    public Date getDataCriacao() {
-        return dataCriacao;
+    public String getStatus() {
+        return status;
     }
 
-    public void setDataCriacao(Date dataCriacao) {
-        this.dataCriacao = dataCriacao;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    public User getSolicitante() {
-        return solicitante;
+    public LocalDateTime getDataAbertura() {
+        return dataAbertura;
     }
 
-    public void setSolicitante(User solicitante) {
-        this.solicitante = solicitante;
+    public void setDataAbertura(LocalDateTime dataAbertura) {
+        this.dataAbertura = dataAbertura;
+    }
+
+    public LocalDateTime getDataFechamento() {
+        return dataFechamento;
+    }
+
+    public void setDataFechamento(LocalDateTime dataFechamento) {
+        this.dataFechamento = dataFechamento;
+    }
+
+    public User getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(User usuario) {
+        this.usuario = usuario;
     }
 
     public User getHelper() {
@@ -79,14 +107,27 @@ public class Chamado {
         this.helper = helper;
     }
 
-    private Date dataCriacao;
+    public String getCategoria() {
+        return categoria;
+    }
 
-    @ManyToOne
-    @JoinColumn(name = "solicitante_id")
-    private User solicitante;
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
 
-    @ManyToOne
-    @JoinColumn(name = "helper_id")
-    private User helper;
+    public String getTipo() {
+        return tipo;
+    }
 
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+
+    public LocalDateTime getDataInicio() {
+        return dataInicio;
+    }
+
+    public void setDataInicio(LocalDateTime dataInicio) {
+        this.dataInicio = dataInicio;
+    }
 }
