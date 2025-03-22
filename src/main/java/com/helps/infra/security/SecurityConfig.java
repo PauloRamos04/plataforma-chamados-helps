@@ -34,7 +34,6 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Adicione esta anotação para suporte a @PreAuthorize
 public class SecurityConfig {
 
     @Value("${jwt.public.key}")
@@ -48,17 +47,27 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authorize -> authorize
                         // Endpoints públicos
-                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/register/helper").permitAll()
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
 
-                        // Endpoints admin
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        // Endpoints admin - Gerenciamento de usuários
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/users/{id}").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/admin/users").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/admin/users/{id}").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/admin/users/{id}/status").hasAuthority("ADMIN")
+
+                        // Endpoints para registro de usuários
+                        .requestMatchers(HttpMethod.POST, "/users").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
                         // Endpoints helper
-                        .requestMatchers(HttpMethod.PUT, "/chamados/{id}/aderir").hasAnyAuthority("ROLE_HELPER", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/mensagens").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/chamados/{id}/mensagens").authenticated()
 
                         // Todos os outros endpoints requerem autenticação
                         .anyRequest().authenticated())

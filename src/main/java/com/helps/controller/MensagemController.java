@@ -2,7 +2,7 @@ package com.helps.controller;
 
 import com.helps.domain.model.Mensagem;
 import com.helps.domain.service.MensagemService;
-import com.helps.dto.MensagemDTO;
+import com.helps.dto.MensagemDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +30,7 @@ public class MensagemController {
     @PostMapping
     public ResponseEntity<Mensagem> enviarMensagem(
             @PathVariable Long chamadoId,
-            @RequestBody MensagemDTO mensagemDTO) {
+            @RequestBody MensagemDto mensagemDTO) {
         try {
             Mensagem mensagem = mensagemService.enviarMensagem(chamadoId, mensagemDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(mensagem);

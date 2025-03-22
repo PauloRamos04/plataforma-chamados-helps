@@ -6,7 +6,7 @@ import com.helps.domain.model.User;
 import com.helps.domain.repository.ChamadoRepository;
 import com.helps.domain.repository.MensagemRepository;
 import com.helps.domain.repository.UserRepository;
-import com.helps.dto.MensagemDTO;
+import com.helps.dto.MensagemDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -36,7 +36,7 @@ public class MensagemService {
         return mensagemRepository.findByChamadoOrderByDataEnvioAsc(chamado);
     }
 
-    public Mensagem enviarMensagem(Long chamadoId, MensagemDTO mensagemDTO) {
+    public Mensagem enviarMensagem(Long chamadoId, MensagemDto mensagemDTO) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
 

@@ -21,6 +21,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column
+    private String name;
+
+    @Column(nullable = false)
+    private Boolean enabled = true;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -53,6 +59,22 @@ public class User {
         this.password = password;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
     public Set<Role> getRoles() {
         return roles;
     }
@@ -63,5 +85,9 @@ public class User {
 
     public boolean isLoginCorrect(LoginRequest loginRequest, BCryptPasswordEncoder encoder) {
         return encoder.matches(loginRequest.password(), this.password);
+    }
+
+    public boolean isEnabled() {
+        return this.enabled;
     }
 }

@@ -1,13 +1,8 @@
 package com.helps.dto;
 
-public record CreateUserDto(String username, String password, String role) {
-    public CreateUserDto {
-        if (role == null) {
-            role = "OPERADOR";
-        }
-    }
-
+public record CreateUserDto(String username, String password, String name) {
+    // Construtor para compatibilidade com CreateUserWithRoleDto
     public CreateUserDto(String username, String password) {
-        this(username, password, "OPERADOR");
+        this(username, password, null);
     }
 }

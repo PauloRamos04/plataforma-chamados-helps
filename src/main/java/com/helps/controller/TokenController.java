@@ -17,7 +17,6 @@ public class TokenController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        System.out.println("usuardio logado");
         LoginResponse response = authService.authenticate(loginRequest);
         return ResponseEntity.ok(response);
     }

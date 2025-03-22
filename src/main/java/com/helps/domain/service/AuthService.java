@@ -1,5 +1,6 @@
 package com.helps.domain.service;
 
+import com.helps.domain.model.Role;
 import com.helps.dto.LoginRequest;
 import com.helps.dto.LoginResponse;
 import com.helps.domain.model.User;
@@ -40,7 +41,7 @@ public class AuthService {
 
         // Extrair roles para adicionar ao token
         var roles = user.getRoles().stream()
-                .map(role -> "ROLE_" + role.getName())
+                .map(Role::getName)
                 .collect(Collectors.toList());
 
         var claims = JwtClaimsSet.builder()

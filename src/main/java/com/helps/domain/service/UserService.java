@@ -5,15 +5,18 @@ import com.helps.domain.model.User;
 import com.helps.domain.repository.RoleRepository;
 import com.helps.domain.repository.UserRepository;
 import com.helps.dto.CreateUserDto;
+import com.helps.dto.UserResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -25,44 +28,70 @@ public class UserService {
     private RoleRepository roleRepository;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
-    public User createUser(CreateUserDto dto, String roleName) {
-        if (dto.username() == null || dto.password() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username e senha são obrigatórios.");
+    @Transactional
+    public UserResponseDto createUser(CreateUserDto dto, String roleName) {
+        // Verificar se o usuário já existe
+        if (userRepository.findByUsername(dto.username()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome de usuário já existe");
         }
 
-        var role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Role " + roleName + " não encontrada no banco."));
+        // Buscar a role pelo nome SEM adicionar o prefixo "ROLE_"
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Role não encontrada: " + roleName));
 
-        var userFromDb = userRepository.findByUsername(dto.username());
-        if (userFromDb.isPresent()) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "Usuário já existe.");
-        }
-
-        var user = new User();
+        // Criar o novo usuário
+        User user = new User();
         user.setUsername(dto.username());
         user.setPassword(passwordEncoder.encode(dto.password()));
-        user.setRoles(Set.of(role));
+        user.setName(dto.name());
+        user.setEnabled(true);
+        user.setRoles(Collections.singleton(role));
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        return convertToDto(savedUser);
     }
 
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public List<UserResponseDto> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
+    public Optional<UserResponseDto> getUserById(Long id) {
+        return userRepository.findById(id)
+                .map(this::convertToDto);
     }
 
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
+    @Transactional
     public void deleteUser(Long id) {
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+
+        userRepository.delete(user);
+    }
+
+    @Transactional
+    public UserResponseDto updateUserStatus(Long id, boolean enabled) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+
+        user.setEnabled(enabled);
+        return convertToDto(userRepository.save(user));
+    }
+
+    private UserResponseDto convertToDto(User user) {
+        return new UserResponseDto(
+                user.getId(),
+                user.getUsername(),
+                user.getName(),
+                user.isEnabled(),
+                user.getRoles().stream()
+                        .map(Role::getName)
+                        .collect(Collectors.toList())
+        );
     }
 }
