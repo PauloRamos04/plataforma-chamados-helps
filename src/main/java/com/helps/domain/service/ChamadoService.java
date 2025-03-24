@@ -3,11 +3,8 @@ package com.helps.domain.service;
 import com.helps.domain.model.Chamado;
 import com.helps.domain.model.User;
 import com.helps.domain.repository.ChamadoRepository;
-import com.helps.domain.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,10 +20,27 @@ public class ChamadoService {
     private ChamadoRepository chamadoRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private UserContextService userContextService;
+
+    @Autowired
+    private ChamadoAccessService chamadoAccessService;
+
+    @Autowired
+    private WebSocketService webSocketService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     public List<Chamado> listarChamados() {
-        return chamadoRepository.findAll();
+        User currentUser = userContextService.getCurrentUser();
+
+        if (userContextService.hasRole("ADMIN")) {
+            return chamadoRepository.findAll();
+        } else if (userContextService.hasRole("HELPER")) {
+            return chamadoRepository.findByHelperOrStatus(currentUser, "ABERTO");
+        } else {
+            return chamadoRepository.findByUsuario(currentUser);
+        }
     }
 
     public List<Chamado> listarChamadosPorStatus(String status) {
@@ -35,27 +49,54 @@ public class ChamadoService {
 
     @Transactional
     public Chamado abrirChamado(Chamado chamado) {
+        User solicitante = userContextService.getCurrentUser();
+
         chamado.setDataAbertura(LocalDateTime.now());
         chamado.setStatus("ABERTO");
-
-        User solicitante = getCurrentUser();
-
         chamado.setUsuario(solicitante);
 
-        return chamadoRepository.save(chamado);
+        Chamado chamadoSalvo = chamadoRepository.save(chamado);
+
+        notificarHelpersDisponiveis(chamadoSalvo);
+
+        return chamadoSalvo;
     }
 
     public Optional<Chamado> buscarPorId(Long id) {
-        return chamadoRepository.findById(id);
+        Optional<Chamado> chamadoOpt = chamadoRepository.findById(id);
+
+        chamadoOpt.ifPresent(chamado -> {
+            if (!chamadoAccessService.podeAcessarChamado(chamado)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Você não tem permissão para acessar este chamado");
+            }
+        });
+
+        return chamadoOpt;
     }
 
     @Transactional
     public Chamado atualizarChamado(Long id, Chamado chamadoAtualizado) {
         return chamadoRepository.findById(id)
                 .map(chamado -> {
+                    if (!chamadoAccessService.podeAcessarChamado(chamado)) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "Você não tem permissão para atualizar este chamado");
+                    }
+
                     chamado.setTitulo(chamadoAtualizado.getTitulo());
                     chamado.setDescricao(chamadoAtualizado.getDescricao());
-                    chamado.setStatus(chamadoAtualizado.getStatus());
+
+                    if (userContextService.hasRole("ADMIN") && chamadoAtualizado.getStatus() != null) {
+                        String statusAnterior = chamado.getStatus();
+                        chamado.setStatus(chamadoAtualizado.getStatus());
+
+                        if (!statusAnterior.equals(chamadoAtualizado.getStatus())) {
+                            webSocketService.notificarStatusChamado(chamado,
+                                    "Status alterado de " + statusAnterior + " para " + chamado.getStatus());
+                        }
+                    }
+
                     return chamadoRepository.save(chamado);
                 })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
@@ -65,99 +106,86 @@ public class ChamadoService {
     public void fecharChamado(Long id) {
         chamadoRepository.findById(id)
                 .map(chamado -> {
-                    if (!"EM_ATENDIMENTO".equals(chamado.getStatus())) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Apenas chamados em atendimento podem ser fechados. Status atual: " + chamado.getStatus());
-                    }
+                    chamadoAccessService.verificarPermissaoFecharChamado(chamado);
 
                     chamado.setStatus("FECHADO");
                     chamado.setDataFechamento(LocalDateTime.now());
-                    return chamadoRepository.save(chamado);
+
+                    Chamado chamadoFechado = chamadoRepository.save(chamado);
+
+                    webSocketService.notificarStatusChamado(chamadoFechado,
+                            "Chamado finalizado por " + userContextService.getCurrentUser().getName());
+
+                    if (chamado.getUsuario() != null) {
+                        notificationService.criarNotificacaoParaUsuario(
+                                chamado.getUsuario().getId(),
+                                "Seu chamado \"" + chamado.getTitulo() + "\" foi finalizado",
+                                "CHAMADO_FECHADO",
+                                chamado.getId());
+                    }
+
+                    return chamadoFechado;
                 })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
     }
 
     @Transactional
     public Chamado aderirChamado(Long id) {
-        User helper = getCurrentUser();
+        User helper = userContextService.getCurrentUser();
+        Chamado chamado = chamadoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
 
-        boolean isAuthorized = helper.getRoles().stream()
-                .anyMatch(role -> role.getName().equals("HELPER") || role.getName().equals("ADMIN") ||
-                        role.getName().equals("ROLE_HELPER") || role.getName().equals("ROLE_ADMIN"));
+        chamadoAccessService.verificarPermissaoAderirChamado(chamado);
 
-        if (!isAuthorized) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Usuário não tem permissão para aderir a chamados. Papéis necessários: HELPER ou ADMIN");
+        chamado.setHelper(helper);
+        chamado.setStatus("EM_ATENDIMENTO");
+        chamado.setDataInicio(LocalDateTime.now());
+
+        Chamado chamadoAtualizado = chamadoRepository.save(chamado);
+
+        webSocketService.notificarStatusChamado(chamadoAtualizado,
+                helper.getName() + " começou a atender este chamado");
+
+        if (chamado.getUsuario() != null) {
+            notificationService.criarNotificacaoParaUsuario(
+                    chamado.getUsuario().getId(),
+                    "Seu chamado \"" + chamado.getTitulo() + "\" começou a ser atendido por " + helper.getName(),
+                    "CHAMADO_EM_ATENDIMENTO",
+                    chamado.getId());
         }
 
-        return chamadoRepository.findById(id)
-                .map(chamado -> {
-                    if (!"ABERTO".equals(chamado.getStatus())) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "Chamado não está disponível para atendimento. Status atual: " + chamado.getStatus());
-                    }
-
-                    chamado.setHelper(helper);
-                    chamado.setStatus("EM_ATENDIMENTO");
-                    chamado.setDataInicio(LocalDateTime.now());
-                    return chamadoRepository.save(chamado);
-                })
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
+        return chamadoAtualizado;
     }
 
     public List<Chamado> listarChamadosPorHelper() {
-        User helper = getCurrentUser();
+        User helper = userContextService.getCurrentUser();
 
-        boolean isAuthorized = helper.getRoles().stream()
-                .anyMatch(role -> role.getName().equals("HELPER") || role.getName().equals("ADMIN") ||
-                        role.getName().equals("ROLE_HELPER") || role.getName().equals("ROLE_ADMIN"));
-
-        if (!isAuthorized) {
+        if (!userContextService.hasAnyRole("HELPER", "ADMIN")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Usuário não tem permissão para listar chamados de helper. Papéis necessários: HELPER ou ADMIN");
+                    "Usuário não tem permissão para listar chamados de helper");
         }
 
         return chamadoRepository.findByHelper(helper);
     }
-    public List<Chamado> listarChamadosPorUsuario() {
-        User usuario = getCurrentUser();
 
+    public List<Chamado> listarChamadosPorUsuario() {
+        User usuario = userContextService.getCurrentUser();
         return chamadoRepository.findByUsuario(usuario);
     }
 
-    private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não autenticado");
+    private void notificarHelpersDisponiveis(Chamado chamado) {
+        List<User> helpers = obterHelpersDisponiveis(chamado.getCategoria());
+
+        for (User helper : helpers) {
+            notificationService.criarNotificacaoParaUsuario(
+                    helper.getId(),
+                    "Novo chamado disponível: " + chamado.getTitulo(),
+                    "NOVO_CHAMADO",
+                    chamado.getId());
         }
+    }
 
-        String username = auth.getName();
-        System.out.println("Tentando encontrar usuário: " + username);
-
-        Long userId = null;
-        try {
-            userId = Long.parseLong(username);
-            System.out.println("O token contém um ID numérico: " + userId);
-        } catch (NumberFormatException e) {
-            System.out.println("O token contém um username, não um ID numérico");
-        }
-
-        User user = null;
-        if (userId != null) {
-            user = userRepository.findById(userId).orElse(null);
-            System.out.println("Busca por ID " + userId + ": " + (user != null ? "encontrado" : "não encontrado"));
-        }
-
-        if (user == null) {
-            user = userRepository.findByUsername(username).orElse(null);
-            System.out.println("Busca por username " + username + ": " + (user != null ? "encontrado" : "não encontrado"));
-        }
-
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Usuário não encontrado para o token. Username/ID: " + username);
-        }
-
-        return user;
+    private List<User> obterHelpersDisponiveis(String categoria) {
+        return userContextService.findUsersWithRole("HELPER");
     }
 }
