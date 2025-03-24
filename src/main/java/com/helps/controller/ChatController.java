@@ -41,15 +41,12 @@ public class ChatController {
     @Autowired
     private ChamadoRepository chamadoRepository;
 
-    // Endpoint para enviar mensagem de chat em um chamado específico
     @MessageMapping("/chat.sendMessage/{chamadoId}")
     @SendTo("/topic/chamado/{chamadoId}")
     public ChatMessageDto sendMessage(@DestinationVariable Long chamadoId, @Payload ChatMessageDto chatMessage) {
-        // Salva a mensagem no banco de dados usando o serviço existente
         MensagemDto mensagemDto = new MensagemDto(chatMessage.content());
         Mensagem mensagem = mensagemService.enviarMensagem(chamadoId, mensagemDto);
 
-        // Retorna uma nova versão da mensagem com dados adicionais
         return new ChatMessageDto(
                 "CHAT",
                 chamadoId,
@@ -60,14 +57,12 @@ public class ChatController {
         );
     }
 
-    // Endpoint para notificar quando um usuário entra no chat de um chamado
     @MessageMapping("/chat.addUser/{chamadoId}")
     @SendTo("/topic/chamado/{chamadoId}")
     public ChatMessageDto addUser(@DestinationVariable Long chamadoId,
                                   @Payload ChatMessageDto chatMessage,
                                   SimpMessageHeaderAccessor headerAccessor) {
 
-        // Armazena o nome do usuário na sessão websocket
         headerAccessor.getSessionAttributes().put("username", chatMessage.senderName());
         headerAccessor.getSessionAttributes().put("chamadoId", chamadoId);
 
@@ -81,7 +76,6 @@ public class ChatController {
         );
     }
 
-    // Endpoint REST para obter histórico de mensagens
     @GetMapping("/chamados/{chamadoId}/chat-history")
     public @ResponseBody List<ChatMessageDto> getChatHistory(@PathVariable Long chamadoId) {
         // Busca as mensagens do chamado e converte para o formato de chat

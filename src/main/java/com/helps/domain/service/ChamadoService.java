@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -32,39 +33,15 @@ public class ChamadoService {
         return chamadoRepository.findByStatus(status);
     }
 
+    @Transactional
     public Chamado abrirChamado(Chamado chamado) {
         chamado.setDataAbertura(LocalDateTime.now());
         chamado.setStatus("ABERTO");
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não autenticado");
-        }
-
-        String username = auth.getName();
-        System.out.println("Tentando encontrar usuário: " + username);
-
-        // Verificar se o token contém 'sub' numérico (caso seja o ID em vez do username)
-        Long userId = null;
-        try {
-            userId = Long.parseLong(username);
-            System.out.println("O token contém um ID numérico: " + userId);
-        } catch (NumberFormatException e) {
-            System.out.println("O token contém um username, não um ID numérico");
-        }
-
-        User solicitante = null;
-        if (userId != null) {
-            solicitante = userRepository.findById(userId).orElse(null);
-        }
-
-        if (solicitante == null) {
-            solicitante = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                            "Usuário não encontrado para o token. Username/ID: " + username));
-        }
+        User solicitante = getCurrentUser();
 
         chamado.setUsuario(solicitante);
+
         return chamadoRepository.save(chamado);
     }
 
@@ -72,6 +49,7 @@ public class ChamadoService {
         return chamadoRepository.findById(id);
     }
 
+    @Transactional
     public Chamado atualizarChamado(Long id, Chamado chamadoAtualizado) {
         return chamadoRepository.findById(id)
                 .map(chamado -> {
@@ -83,9 +61,15 @@ public class ChamadoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
     }
 
+    @Transactional
     public void fecharChamado(Long id) {
         chamadoRepository.findById(id)
                 .map(chamado -> {
+                    if (!"EM_ATENDIMENTO".equals(chamado.getStatus())) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "Apenas chamados em atendimento podem ser fechados. Status atual: " + chamado.getStatus());
+                    }
+
                     chamado.setStatus("FECHADO");
                     chamado.setDataFechamento(LocalDateTime.now());
                     return chamadoRepository.save(chamado);
@@ -93,16 +77,21 @@ public class ChamadoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
     }
 
+    @Transactional
     public Chamado aderirChamado(Long id) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
+        User helper = getCurrentUser();
 
-        User helper = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Helper não encontrado"));
+        boolean isAuthorized = helper.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("HELPER") || role.getName().equals("ADMIN") ||
+                        role.getName().equals("ROLE_HELPER") || role.getName().equals("ROLE_ADMIN"));
+
+        if (!isAuthorized) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Usuário não tem permissão para aderir a chamados. Papéis necessários: HELPER ou ADMIN");
+        }
 
         return chamadoRepository.findById(id)
                 .map(chamado -> {
-                    // Verificar se o chamado já está em atendimento
                     if (!"ABERTO".equals(chamado.getStatus())) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                                 "Chamado não está disponível para atendimento. Status atual: " + chamado.getStatus());
@@ -117,12 +106,58 @@ public class ChamadoService {
     }
 
     public List<Chamado> listarChamadosPorHelper() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
+        User helper = getCurrentUser();
 
-        User helper = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Helper não encontrado"));
+        boolean isAuthorized = helper.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("HELPER") || role.getName().equals("ADMIN") ||
+                        role.getName().equals("ROLE_HELPER") || role.getName().equals("ROLE_ADMIN"));
+
+        if (!isAuthorized) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Usuário não tem permissão para listar chamados de helper. Papéis necessários: HELPER ou ADMIN");
+        }
 
         return chamadoRepository.findByHelper(helper);
+    }
+    public List<Chamado> listarChamadosPorUsuario() {
+        User usuario = getCurrentUser();
+
+        return chamadoRepository.findByUsuario(usuario);
+    }
+
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuário não autenticado");
+        }
+
+        String username = auth.getName();
+        System.out.println("Tentando encontrar usuário: " + username);
+
+        Long userId = null;
+        try {
+            userId = Long.parseLong(username);
+            System.out.println("O token contém um ID numérico: " + userId);
+        } catch (NumberFormatException e) {
+            System.out.println("O token contém um username, não um ID numérico");
+        }
+
+        User user = null;
+        if (userId != null) {
+            user = userRepository.findById(userId).orElse(null);
+            System.out.println("Busca por ID " + userId + ": " + (user != null ? "encontrado" : "não encontrado"));
+        }
+
+        if (user == null) {
+            user = userRepository.findByUsername(username).orElse(null);
+            System.out.println("Busca por username " + username + ": " + (user != null ? "encontrado" : "não encontrado"));
+        }
+
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Usuário não encontrado para o token. Username/ID: " + username);
+        }
+
+        return user;
     }
 }

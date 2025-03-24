@@ -1,4 +1,4 @@
-package com.helps.config;
+package com.helps.infra.config;
 
 import com.helps.domain.model.Role;
 import com.helps.domain.model.User;
@@ -38,7 +38,7 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     private void initializeRoles() {
         for (Role.Values roleValue : Role.Values.values()) {
-            String roleName = roleValue.name(); // Agora o enum já inclui o prefixo ROLE_
+            String roleName = roleValue.name();
             roleRepository.findByName(roleName).orElseGet(() -> {
                 Role role = new Role();
                 role.setName(roleName);
@@ -53,13 +53,10 @@ public class DatabaseInitializer implements CommandLineRunner {
         userRepository.findByUsername("admin").ifPresentOrElse(
                 user -> System.out.println("Usuário admin já existe."),
                 () -> {
-                    // Primeiro, criamos as roles se não existirem
                     initializeRoles();
 
-                    // Agora tentamos encontrar a role ROLE_ADMIN
                     Role adminRole = roleRepository.findByName(Role.Values.ADMIN.name())
                             .orElseGet(() -> {
-                                // Se não encontrar, cria a role manualmente
                                 Role role = new Role();
                                 role.setName(Role.Values.ADMIN.name());
                                 return roleRepository.save(role);

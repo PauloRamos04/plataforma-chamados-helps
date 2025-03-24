@@ -22,7 +22,6 @@ public class NotificationController {
     @Autowired
     private UserRepository userRepository;
 
-    // Obter notificações não lidas do usuário atual
     @GetMapping("/unread")
     public ResponseEntity<List<NotificationDto>> getUnreadNotifications() {
         User user = getCurrentUser();
@@ -30,14 +29,12 @@ public class NotificationController {
         return ResponseEntity.ok(notifications);
     }
 
-    // Marcar uma notificação como lida
     @PatchMapping("/{id}/read")
     public ResponseEntity<NotificationDto> markAsRead(@PathVariable Long id) {
         NotificationDto notification = notificationService.markAsRead(id);
         return ResponseEntity.ok(notification);
     }
 
-    // Marcar todas as notificações como lidas
     @PatchMapping("/mark-all-read")
     public ResponseEntity<Void> markAllAsRead() {
         User user = getCurrentUser();
@@ -45,7 +42,6 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
-    // Método auxiliar para obter o usuário atual
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();

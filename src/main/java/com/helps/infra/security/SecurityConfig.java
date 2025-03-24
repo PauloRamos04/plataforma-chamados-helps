@@ -11,9 +11,9 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -46,10 +46,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authorize -> authorize
-                        // Endpoints públicos
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll() // Only for development
+                        .requestMatchers("/ws/**").permitAll() // WebSockets need separate authentication
 
-                        // Endpoints admin - Gerenciamento de usuários
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users/{id}").hasAuthority("ADMIN")
@@ -57,28 +57,35 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/admin/users/{id}").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/admin/users/{id}/status").hasAuthority("ADMIN")
 
-                        // Endpoints para registro de usuários
-                        .requestMatchers(HttpMethod.POST, "/users").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll() // Allow public registration
                         .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
-                        // Endpoints helper
-                        .requestMatchers(HttpMethod.PUT, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
+
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/mensagens").authenticated()
                         .requestMatchers(HttpMethod.GET, "/chamados/{id}/mensagens").authenticated()
 
-                        // Todos os outros endpoints requerem autenticação
                         .anyRequest().authenticated())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions().sameOrigin())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(Customizer.withDefaults());
 
         return http.build();
+    }
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/ws/**");
     }
 
     @Bean
@@ -89,12 +96,20 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
+        configuration.setAllowCredentials(false);
+        configuration.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
+        CorsConfiguration wsConfiguration = new CorsConfiguration(configuration);
+        wsConfiguration.setAllowedOrigins(List.of("http://localhost:3000"));
+        source.registerCorsConfiguration("/ws/**", wsConfiguration);
+
         return source;
     }
 

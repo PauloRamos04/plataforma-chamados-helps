@@ -32,17 +32,14 @@ public class UserService {
 
     @Transactional
     public UserResponseDto createUser(CreateUserDto dto, String roleName) {
-        // Verificar se o usuário já existe
         if (userRepository.findByUsername(dto.username()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome de usuário já existe");
         }
 
-        // Buscar a role pelo nome SEM adicionar o prefixo "ROLE_"
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Role não encontrada: " + roleName));
 
-        // Criar o novo usuário
         User user = new User();
         user.setUsername(dto.username());
         user.setPassword(passwordEncoder.encode(dto.password()));

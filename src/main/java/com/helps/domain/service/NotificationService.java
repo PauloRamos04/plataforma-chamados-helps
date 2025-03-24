@@ -25,7 +25,6 @@ public class NotificationService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    // Criar e enviar uma notificação para um usuário
     public NotificationDto createAndSendNotification(Long userId, String message, String type, Long chamadoId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
@@ -40,10 +39,8 @@ public class NotificationService {
 
         notification = notificationRepository.save(notification);
 
-        // Converter para DTO
         NotificationDto notificationDto = convertToDto(notification);
 
-        // Enviar notificação via WebSocket
         messagingTemplate.convertAndSendToUser(
                 user.getUsername(),
                 "/queue/notifications",
@@ -53,7 +50,6 @@ public class NotificationService {
         return notificationDto;
     }
 
-    // Buscar notificações não lidas de um usuário
     public List<NotificationDto> getUnreadNotifications(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
@@ -64,7 +60,6 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    // Marcar uma notificação como lida
     public NotificationDto markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notificação não encontrada"));
@@ -75,7 +70,6 @@ public class NotificationService {
         return convertToDto(notification);
     }
 
-    // Marcar todas as notificações de um usuário como lidas
     public void markAllAsRead(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
@@ -85,7 +79,6 @@ public class NotificationService {
         notificationRepository.saveAll(notifications);
     }
 
-    // Método auxiliar para converter a entidade para DTO
     private NotificationDto convertToDto(Notification notification) {
         return new NotificationDto(
                 notification.getId(),
