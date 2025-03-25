@@ -10,21 +10,19 @@ import org.springframework.web.socket.config.annotation.WebSocketTransportRegist
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setAllowedOrigins("http://localhost:3000")
                 .withSockJS()
-                .setSuppressCors(true)  // Adicionar suporte para mensagens parciais
-                .setWebSocketEnabled(true)
-                .setSessionCookieNeeded(false)     // IMPORTANTE: desabilitar cookies de sessão
-                .setHeartbeatTime(25000);          // Heartbeat para manter conexão viva
+                .setSessionCookieNeeded(false)
+                .setHeartbeatTime(25000)  // Heartbeat a cada 25 segundos
+                .setDisconnectDelay(30000);  // Timeout de desconexão
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
+        registry.enableSimpleBroker("/topic", "/queue");
         registry.setApplicationDestinationPrefixes("/app");
     }
 

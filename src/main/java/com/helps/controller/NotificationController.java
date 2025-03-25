@@ -5,11 +5,13 @@ import com.helps.domain.repository.UserRepository;
 import com.helps.domain.service.NotificationService;
 import com.helps.dto.NotificationDto;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -24,9 +26,16 @@ public class NotificationController {
 
     @GetMapping("/unread")
     public ResponseEntity<List<NotificationDto>> getUnreadNotifications() {
-        User user = getCurrentUser();
-        List<NotificationDto> notifications = notificationService.getUnreadNotifications(user.getId());
-        return ResponseEntity.ok(notifications);
+        try {
+            User user = getCurrentUser();
+            List<NotificationDto> notifications = notificationService.getUnreadNotifications(user.getId());
+            return ResponseEntity.ok(notifications);
+        } catch (Exception e) {
+            // Log the error
+            System.err.println("Erro ao buscar notificações não lidas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.emptyList());
+        }
     }
 
     @PatchMapping("/{id}/read")

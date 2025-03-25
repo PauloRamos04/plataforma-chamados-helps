@@ -95,6 +95,7 @@ public class NotificationService {
         }
     }
 
+    @Transactional
     public List<NotificationDto> getUnreadNotifications(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));

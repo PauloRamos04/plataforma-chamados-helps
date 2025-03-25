@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -57,22 +58,10 @@ public class ChamadoService {
 
         Chamado chamadoSalvo = chamadoRepository.save(chamado);
 
-        notificarHelpersDisponiveis(chamadoSalvo);
+        // Chame o serviço de notificação
+        notificationService.notificarNovosChamados(chamadoSalvo);
 
         return chamadoSalvo;
-    }
-
-    public Optional<Chamado> buscarPorId(Long id) {
-        Optional<Chamado> chamadoOpt = chamadoRepository.findById(id);
-
-        chamadoOpt.ifPresent(chamado -> {
-            if (!chamadoAccessService.podeAcessarChamado(chamado)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                        "Você não tem permissão para acessar este chamado");
-            }
-        });
-
-        return chamadoOpt;
     }
 
     @Transactional
@@ -186,6 +175,27 @@ public class ChamadoService {
     }
 
     private List<User> obterHelpersDisponiveis(String categoria) {
-        return userContextService.findUsersWithRole("HELPER");
+        List<User> helpers = userContextService.findUsersWithRole("HELPER");
+
+        System.out.println("Total de helpers: " + helpers.size());
+        helpers.forEach(helper ->
+                System.out.println("Helper: " + helper.getUsername())
+        );
+
+        return helpers;
     }
+
+    public Optional<Chamado> buscarPorId(Long id) {
+        Optional<Chamado> chamadoOpt = chamadoRepository.findById(id);
+
+        chamadoOpt.ifPresent(chamado -> {
+            if (!chamadoAccessService.podeAcessarChamado(chamado)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Você não tem permissão para acessar este chamado");
+            }
+        });
+
+        return chamadoOpt;
+    }
+
 }

@@ -35,6 +35,9 @@ public class UserContextService {
         String identifier = auth.getName();
         User user = null;
 
+        System.out.println("Identificador do usuário: " + identifier);
+        System.out.println("Tipo de autenticação: " + auth.getClass());
+
         Optional<User> userByUsername = userRepository.findByUsername(identifier);
         if (userByUsername.isPresent()) {
             return userByUsername.get();
