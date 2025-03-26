@@ -10,7 +10,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @CrossOrigin(
         origins = {
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://helps-plataforms-frontend.vercel.app"
         },
         allowCredentials = "true",
         methods = {RequestMethod.POST, RequestMethod.OPTIONS}
