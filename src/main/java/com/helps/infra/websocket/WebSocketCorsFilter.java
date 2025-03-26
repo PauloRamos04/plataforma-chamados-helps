@@ -23,25 +23,15 @@ public class WebSocketCorsFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-
         if (request.getRequestURI().contains("/ws")) {
-            String[] origins = corsAllowedOrigins.split(",");
             String origin = request.getHeader("Origin");
-
-            boolean originAllowed = false;
-            if (origin != null) {
-                for (String allowedOrigin : origins) {
-                    if (allowedOrigin.trim().equals(origin)) {
-                        originAllowed = true;
-                        break;
-                    }
-                }
-            }
-
-            if (originAllowed) {
+            if (origin != null && (
+                    origin.equals("http://localhost:3000") ||
+                            origin.equals("https://helps-plataforms-frontend.vercel.app")
+            )) {
                 response.setHeader("Access-Control-Allow-Origin", origin);
             } else {
-                response.setHeader("Access-Control-Allow-Origin", origins[0].trim());
+                response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
             }
 
             response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

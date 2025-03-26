@@ -96,31 +96,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        String corsAllowedOrigins = "http://localhost:3000,https://helps-plataforms-frontend.vercel.app";
-        List<String> allowedOrigins = Arrays.asList(corsAllowedOrigins.split(","));
-        configuration.setAllowedOrigins(allowedOrigins);
-
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "https://helps-plataforms-frontend.vercel.app"
+        ));
         configuration.setAllowCredentials(true);
-
-        String corsAllowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
-        List<String> allowedMethods = Arrays.asList(corsAllowedMethods.split(","));
-        String corsAllowedHeaders = "authorization,content-type,x-auth-token";
-        List<String> allowedHeaders = Arrays.asList(corsAllowedHeaders.split(","));
-        String corsExposedHeaders = "x-auth-token";
-        List<String> exposedHeaders = Arrays.asList(corsExposedHeaders.split(","));
-
-        configuration.setAllowedMethods(allowedMethods);
-        configuration.setAllowedHeaders(allowedHeaders);
-        configuration.setExposedHeaders(exposedHeaders);
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
+        configuration.setExposedHeaders(List.of("x-auth-token"));
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
-        CorsConfiguration wsConfig = new CorsConfiguration(configuration);
-        source.registerCorsConfiguration("/ws/**", wsConfig);
-
         return source;
     }
 
