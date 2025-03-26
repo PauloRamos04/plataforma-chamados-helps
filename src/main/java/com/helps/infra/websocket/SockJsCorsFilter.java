@@ -22,8 +22,8 @@ public class SockJsCorsFilter extends OncePerRequestFilter {
         if (request.getRequestURI().contains("/ws/")) {
             System.out.println("Interceptando requisição SockJS: " + request.getRequestURI());
 
-            response.setHeader("Access-Control-Allow-Origin", "https://helps-plataforms-frontend.vercel.app/");
-            response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PATCH, PUT");
             response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
             response.setHeader("Access-Control-Max-Age", "3600");
 

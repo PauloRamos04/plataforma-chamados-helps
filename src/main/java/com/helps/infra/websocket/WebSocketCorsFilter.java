@@ -34,7 +34,7 @@ public class WebSocketCorsFilter extends OncePerRequestFilter {
                 response.setHeader("Access-Control-Allow-Origin", requestOrigin);
             }
 
-            response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
             response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
             response.setHeader("Access-Control-Allow-Credentials", "true");
             response.setHeader("Access-Control-Max-Age", "3600");
