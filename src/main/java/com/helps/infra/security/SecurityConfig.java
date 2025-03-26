@@ -93,27 +93,38 @@ public class SecurityConfig {
         return new JwtRoleConverter();
     }
 
+    @Value("${cors.allowed-origins}")
+    private String corsAllowedOrigins;
+
+    @Value("${cors.allowed-methods}")
+    private String corsAllowedMethods;
+
+    @Value("${cors.allowed-headers}")
+    private String corsAllowedHeaders;
+
+    @Value("${cors.exposed-headers}")
+    private String corsExposedHeaders;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000"
-        ));
-        configuration.setAllowCredentials(true); // Mantém true
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
-        configuration.setExposedHeaders(List.of("x-auth-token"));
+
+        List<String> allowedOrigins = Arrays.asList(corsAllowedOrigins.split(","));
+        configuration.setAllowedOrigins(allowedOrigins);
+
+        configuration.setAllowCredentials(true);
+
+        List<String> allowedMethods = Arrays.asList(corsAllowedMethods.split(","));
+        List<String> allowedHeaders = Arrays.asList(corsAllowedHeaders.split(","));
+        List<String> exposedHeaders = Arrays.asList(corsExposedHeaders.split(","));
+
+        configuration.setAllowedMethods(allowedMethods);
+        configuration.setAllowedHeaders(allowedHeaders);
+        configuration.setExposedHeaders(exposedHeaders);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
-        CorsConfiguration wsConfiguration = new CorsConfiguration(configuration);
-        wsConfiguration.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "https://helps-plataforms-frontend.vercel.app"
-        ));
-        source.registerCorsConfiguration("/ws/**", wsConfiguration);
 
         return source;
     }
