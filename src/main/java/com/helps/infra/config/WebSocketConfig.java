@@ -17,22 +17,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        String[] allowedOrigins = websocketAllowedOrigins.split(",");
+
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
-                        "http://localhost:3000",
-                        "https://helps-plataforms-frontend.vercel.app"
-                )
+                .setAllowedOrigins(allowedOrigins)
                 .withSockJS()
                 .setSessionCookieNeeded(false)
                 .setHeartbeatTime(25000)
                 .setDisconnectDelay(30000);
 
-        // Endpoint adicional sem SockJS
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(
-                        "http://localhost:3000",
-                        "https://helps-plataforms-frontend.vercel.app"
-                );
+                .setAllowedOrigins(allowedOrigins);
     }
 
     @Override

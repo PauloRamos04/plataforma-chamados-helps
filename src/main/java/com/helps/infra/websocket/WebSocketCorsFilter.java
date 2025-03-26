@@ -11,6 +11,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -24,14 +26,12 @@ public class WebSocketCorsFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         if (request.getRequestURI().contains("/ws")) {
-            String origin = request.getHeader("Origin");
-            if (origin != null && (
-                    origin.equals("http://localhost:3000") ||
-                            origin.equals("https://helps-plataforms-frontend.vercel.app")
-            )) {
-                response.setHeader("Access-Control-Allow-Origin", origin);
-            } else {
-                response.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+            List<String> origins = Arrays.asList(corsAllowedOrigins.split(","));
+
+            String requestOrigin = request.getHeader("Origin");
+
+            if (origins.contains(requestOrigin)) {
+                response.setHeader("Access-Control-Allow-Origin", requestOrigin);
             }
 
             response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

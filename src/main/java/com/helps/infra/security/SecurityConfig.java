@@ -100,7 +100,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "https://helps-plataforms-frontend.vercel.app"
         ));
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true); // Mantém true
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
         configuration.setExposedHeaders(List.of("x-auth-token"));
@@ -108,6 +108,14 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
+        CorsConfiguration wsConfiguration = new CorsConfiguration(configuration);
+        wsConfiguration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "https://helps-plataforms-frontend.vercel.app"
+        ));
+        source.registerCorsConfiguration("/ws/**", wsConfiguration);
+
         return source;
     }
 
