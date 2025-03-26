@@ -42,18 +42,6 @@ public class SecurityConfig {
     @Value("${jwt.private.key}")
     private RSAPrivateKey privateKey;
 
-    @Value("${cors.allowed-origins}")
-    private String corsAllowedOrigins;
-
-    @Value("${cors.allowed-methods}")
-    private String corsAllowedMethods;
-
-    @Value("${cors.allowed-headers}")
-    private String corsAllowedHeaders;
-
-    @Value("${cors.exposed-headers}")
-    private String corsExposedHeaders;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -109,13 +97,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        String corsAllowedOrigins = "http://localhost:3000,https://helps-plataforms-frontend.vercel.app";
         List<String> allowedOrigins = Arrays.asList(corsAllowedOrigins.split(","));
         configuration.setAllowedOrigins(allowedOrigins);
 
         configuration.setAllowCredentials(true);
 
+        String corsAllowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS";
         List<String> allowedMethods = Arrays.asList(corsAllowedMethods.split(","));
+        String corsAllowedHeaders = "authorization,content-type,x-auth-token";
         List<String> allowedHeaders = Arrays.asList(corsAllowedHeaders.split(","));
+        String corsExposedHeaders = "x-auth-token";
         List<String> exposedHeaders = Arrays.asList(corsExposedHeaders.split(","));
 
         configuration.setAllowedMethods(allowedMethods);
@@ -126,7 +118,6 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
-        // Configuração adicional para WebSocket
         CorsConfiguration wsConfig = new CorsConfiguration(configuration);
         source.registerCorsConfiguration("/ws/**", wsConfig);
 
