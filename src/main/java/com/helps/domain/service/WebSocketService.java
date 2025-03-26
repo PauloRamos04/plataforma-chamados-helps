@@ -36,14 +36,20 @@ public class WebSocketService {
     public void enviarNotificacao(NotificationDto notification, User user) {
         if (user != null) {
             try {
-                messagingTemplate.convertAndSendToUser(
-                        user.getUsername(),
-                        "/queue/notifications",
-                        notification
-                );
-                System.out.println("Mensagem enviada com sucesso via WebSocket");
+                // Enviar para o canal específico do usuário
+                String destination = "/user/" + user.getUsername() + "/queue/notifications";
+                messagingTemplate.convertAndSend(destination, notification);
+
+                // Enviar para o canal baseado no ID do usuário (fallback)
+                String idDestination = "/user/" + user.getId() + "/queue/notifications";
+                if (!destination.equals(idDestination)) {
+                    messagingTemplate.convertAndSend(idDestination, notification);
+                }
+
+                // Log para debugar
+                System.out.println("Notificação enviada via WebSocket para " + user.getUsername() + " (ID: " + user.getId() + ")");
             } catch (Exception e) {
-                System.err.println("Erro ao enviar via WebSocket: " + e.getMessage());
+                System.err.println("Erro ao enviar via WebSocket para " + user.getUsername() + ": " + e.getMessage());
                 e.printStackTrace();
             }
         } else {
@@ -62,6 +68,43 @@ public class WebSocketService {
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamado.getId(), statusMessage);
+
+        // Também notificar usuário e helper sobre mudança de status
+        if (chamado.getUsuario() != null) {
+            NotificationDto userNotification = new NotificationDto(
+                    null,
+                    "Status do chamado #" + chamado.getId() + ": " + evento,
+                    "STATUS_CHAMADO",
+                    false,
+                    chamado.getId(),
+                    LocalDateTime.now()
+            );
+
+            User user = chamado.getUsuario();
+            messagingTemplate.convertAndSendToUser(
+                    user.getUsername(),
+                    "/queue/notifications",
+                    userNotification
+            );
+        }
+
+        if (chamado.getHelper() != null) {
+            NotificationDto helperNotification = new NotificationDto(
+                    null,
+                    "Status do chamado #" + chamado.getId() + ": " + evento,
+                    "STATUS_CHAMADO",
+                    false,
+                    chamado.getId(),
+                    LocalDateTime.now()
+            );
+
+            User helper = chamado.getHelper();
+            messagingTemplate.convertAndSendToUser(
+                    helper.getUsername(),
+                    "/queue/notifications",
+                    helperNotification
+            );
+        }
     }
 
     public void notificarEntradaUsuario(Long chamadoId, Long userId, String username) {
@@ -88,5 +131,13 @@ public class WebSocketService {
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamadoId, leaveMessage);
+    }
+
+    public void enviarNotificacaoGlobal(NotificationDto notification) {
+        try {
+            messagingTemplate.convertAndSend("/topic/notifications", notification);
+        } catch (Exception e) {
+            System.err.println("Erro ao enviar notificação global: " + e.getMessage());
+        }
     }
 }

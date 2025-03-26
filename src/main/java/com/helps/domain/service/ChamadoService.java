@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.nio.channels.FileChannel;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -58,8 +57,14 @@ public class ChamadoService {
 
         Chamado chamadoSalvo = chamadoRepository.save(chamado);
 
-        // Chame o serviço de notificação
-        notificationService.notificarNovosChamados(chamadoSalvo);
+        // Notificar sobre o novo chamado - enviando para todos os helpers e admin, exceto o criador
+        try {
+            notificationService.notificarNovosChamados(chamadoSalvo);
+        } catch (Exception e) {
+            // Log do erro, mas permite que a operação continue
+            System.err.println("Erro ao enviar notificações para o novo chamado: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         return chamadoSalvo;
     }
@@ -162,29 +167,6 @@ public class ChamadoService {
         return chamadoRepository.findByUsuario(usuario);
     }
 
-    private void notificarHelpersDisponiveis(Chamado chamado) {
-        List<User> helpers = obterHelpersDisponiveis(chamado.getCategoria());
-
-        for (User helper : helpers) {
-            notificationService.criarNotificacaoParaUsuario(
-                    helper.getId(),
-                    "Novo chamado disponível: " + chamado.getTitulo(),
-                    "NOVO_CHAMADO",
-                    chamado.getId());
-        }
-    }
-
-    private List<User> obterHelpersDisponiveis(String categoria) {
-        List<User> helpers = userContextService.findUsersWithRole("HELPER");
-
-        System.out.println("Total de helpers: " + helpers.size());
-        helpers.forEach(helper ->
-                System.out.println("Helper: " + helper.getUsername())
-        );
-
-        return helpers;
-    }
-
     public Optional<Chamado> buscarPorId(Long id) {
         Optional<Chamado> chamadoOpt = chamadoRepository.findById(id);
 
@@ -197,5 +179,4 @@ public class ChamadoService {
 
         return chamadoOpt;
     }
-
 }

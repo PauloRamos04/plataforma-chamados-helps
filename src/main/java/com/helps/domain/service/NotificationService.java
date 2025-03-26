@@ -1,5 +1,4 @@
 package com.helps.domain.service;
-import com.helps.domain.model.Role;
 
 import com.helps.domain.model.Chamado;
 import com.helps.domain.model.Notification;
@@ -57,66 +56,65 @@ public class NotificationService {
     }
 
     public void notificarNovosChamados(Chamado chamado) {
-        List<User> helpers = new ArrayList<>();
+        // Obter o usuário atual que criou o chamado
+        User usuarioCriador = chamado.getUsuario();
+        Long usuarioCriadorId = usuarioCriador != null ? usuarioCriador.getId() : null;
+
+        // Buscar todos os usuários com role HELPER ou ADMIN (com ou sem prefixo ROLE_)
+        List<User> usersToNotify = new ArrayList<>();
 
         try {
-            List<User> helpersWithoutPrefix = userContextService.findUsersWithRole("HELPER");
-            System.out.println("Helpers encontrados sem prefixo ROLE_: " + helpersWithoutPrefix.size());
-            helpers.addAll(helpersWithoutPrefix);
-        } catch (Exception e) {
-            System.err.println("Erro ao buscar helpers sem prefixo: " + e.getMessage());
-        }
+            // Buscar helpers
+            List<User> helpers = userRepository.findAll().stream()
+                    .filter(user -> user.isEnabled() &&
+                            (hasRole(user, "HELPER") || hasRole(user, "ROLE_HELPER")))
+                    .collect(Collectors.toList());
+            usersToNotify.addAll(helpers);
 
-        try {
-            List<User> helpersWithPrefix = userContextService.findUsersWithRole("ROLE_HELPER");
-            System.out.println("Helpers encontrados com prefixo ROLE_: " + helpersWithPrefix.size());
-            helpers.addAll(helpersWithPrefix);
-        } catch (Exception e) {
-            System.err.println("Erro ao buscar helpers com prefixo: " + e.getMessage());
-        }
+            // Buscar admins
+            List<User> admins = userRepository.findAll().stream()
+                    .filter(user -> user.isEnabled() &&
+                            (hasRole(user, "ADMIN") || hasRole(user, "ROLE_ADMIN")))
+                    .collect(Collectors.toList());
+            usersToNotify.addAll(admins);
 
-        helpers = helpers.stream().distinct().collect(Collectors.toList());
+            // Remover duplicados (caso um usuário tenha múltiplas roles)
+            usersToNotify = usersToNotify.stream()
+                    .distinct()
+                    .collect(Collectors.toList());
 
-        System.out.println("Total de helpers únicos encontrados: " + helpers.size());
-
-        try {
-            List<User> admins = userContextService.findUsersWithRole("ADMIN");
-            System.out.println("Admins encontrados: " + admins.size());
-            helpers.addAll(admins);
-        } catch (Exception e) {
-            System.err.println("Erro ao buscar admins: " + e.getMessage());
-        }
-
-        try {
-            List<User> adminsWithPrefix = userContextService.findUsersWithRole("ROLE_ADMIN");
-            System.out.println("Admins encontrados com prefixo ROLE_: " + adminsWithPrefix.size());
-            helpers.addAll(adminsWithPrefix);
-        } catch (Exception e) {
-            System.err.println("Erro ao buscar admins com prefixo: " + e.getMessage());
-        }
-
-        helpers = helpers.stream().distinct().collect(Collectors.toList());
-
-        System.out.println("Total de usuários a notificar (helpers + admins): " + helpers.size());
-
-        for (User user : helpers) {
-            System.out.println("Usuário: " + user.getUsername() + ", ID: " + user.getId());
-            System.out.println("  Papéis: " + user.getRoles().stream()
-                    .map(Role::getName)
-                    .collect(Collectors.joining(", ")));
-
-            try {
-                criarNotificacaoParaUsuario(
-                        user.getId(),
-                        "Novo chamado disponível: " + chamado.getTitulo(),
-                        "NOVO_CHAMADO",
-                        chamado.getId()
-                );
-                System.out.println("  Notificação enviada com sucesso!");
-            } catch (Exception e) {
-                System.err.println("  Erro ao enviar notificação: " + e.getMessage());
+            // Remover o usuário criador do chamado da lista (se estiver presente)
+            if (usuarioCriadorId != null) {
+                usersToNotify = usersToNotify.stream()
+                        .filter(user -> !user.getId().equals(usuarioCriadorId))
+                        .collect(Collectors.toList());
             }
+
+            System.out.println("Total de usuários a notificar: " + usersToNotify.size());
+
+            // Enviar notificações para cada destinatário
+            for (User user : usersToNotify) {
+                try {
+                    criarNotificacaoParaUsuario(
+                            user.getId(),
+                            "Novo chamado disponível: " + chamado.getTitulo(),
+                            "NOVO_CHAMADO",
+                            chamado.getId()
+                    );
+                    System.out.println("Notificação enviada para: " + user.getUsername());
+                } catch (Exception e) {
+                    System.err.println("Erro ao enviar notificação para " + user.getUsername() + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar notificações de novos chamados: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    private boolean hasRole(User user, String roleName) {
+        return user.getRoles().stream()
+                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
     }
 
     public void notificarMensagemRecebida(Long chamadoId, Long remetenteId, String conteudoResumido) {
@@ -178,7 +176,7 @@ public class NotificationService {
     }
 
     private NotificationDto convertToDto(Notification notification) {
-        NotificationDto dto = new NotificationDto(
+        return new NotificationDto(
                 notification.getId(),
                 notification.getMessage(),
                 notification.getType(),
@@ -186,8 +184,5 @@ public class NotificationService {
                 notification.getChamadoId(),
                 notification.getCreatedAt()
         );
-
-        System.out.println("DTO criado: " + dto);
-        return dto;
     }
 }
