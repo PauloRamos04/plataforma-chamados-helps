@@ -37,9 +37,8 @@ public class AuthService {
         }
 
         var now = Instant.now();
-        var expireIn = 3600L; // 1 hora
+        var expireIn = 3600L;
 
-        // Extrair roles para adicionar ao token
         var roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toList());
