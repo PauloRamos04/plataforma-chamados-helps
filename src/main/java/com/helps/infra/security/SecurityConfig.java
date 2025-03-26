@@ -42,6 +42,18 @@ public class SecurityConfig {
     @Value("${jwt.private.key}")
     private RSAPrivateKey privateKey;
 
+    @Value("${cors.allowed-origins}")
+    private String corsAllowedOrigins;
+
+    @Value("${cors.allowed-methods}")
+    private String corsAllowedMethods;
+
+    @Value("${cors.allowed-headers}")
+    private String corsAllowedHeaders;
+
+    @Value("${cors.exposed-headers}")
+    private String corsExposedHeaders;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -93,18 +105,6 @@ public class SecurityConfig {
         return new JwtRoleConverter();
     }
 
-    @Value("${cors.allowed-origins}")
-    private String corsAllowedOrigins;
-
-    @Value("${cors.allowed-methods}")
-    private String corsAllowedMethods;
-
-    @Value("${cors.allowed-headers}")
-    private String corsAllowedHeaders;
-
-    @Value("${cors.exposed-headers}")
-    private String corsExposedHeaders;
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -125,6 +125,10 @@ public class SecurityConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
+        // Configuração adicional para WebSocket
+        CorsConfiguration wsConfig = new CorsConfiguration(configuration);
+        source.registerCorsConfiguration("/ws/**", wsConfig);
 
         return source;
     }

@@ -16,8 +16,8 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class WebSocketCorsFilter extends OncePerRequestFilter {
 
-    @Value("${websocket.allowed-origins}")
-    private String websocketAllowedOrigins;
+    @Value("${cors.allowed-origins}")
+    private String corsAllowedOrigins;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -25,8 +25,7 @@ public class WebSocketCorsFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         if (request.getRequestURI().contains("/ws")) {
-
-            String[] origins = websocketAllowedOrigins.split(",");
+            String[] origins = corsAllowedOrigins.split(",");
             String origin = request.getHeader("Origin");
 
             boolean originAllowed = false;
@@ -41,7 +40,7 @@ public class WebSocketCorsFilter extends OncePerRequestFilter {
 
             if (originAllowed) {
                 response.setHeader("Access-Control-Allow-Origin", origin);
-            } else if (origins.length > 0) {
+            } else {
                 response.setHeader("Access-Control-Allow-Origin", origins[0].trim());
             }
 
