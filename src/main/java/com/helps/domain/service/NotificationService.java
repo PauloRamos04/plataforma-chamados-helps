@@ -1,4 +1,5 @@
 package com.helps.domain.service;
+import com.helps.domain.model.Role;
 
 import com.helps.domain.model.Chamado;
 import com.helps.domain.model.Notification;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -55,15 +57,65 @@ public class NotificationService {
     }
 
     public void notificarNovosChamados(Chamado chamado) {
-        List<User> helpers = userContextService.findUsersWithRole("HELPER");
+        List<User> helpers = new ArrayList<>();
 
-        for (User helper : helpers) {
-            criarNotificacaoParaUsuario(
-                    helper.getId(),
-                    "Novo chamado disponível: " + chamado.getTitulo(),
-                    "NOVO_CHAMADO",
-                    chamado.getId()
-            );
+        try {
+            List<User> helpersWithoutPrefix = userContextService.findUsersWithRole("HELPER");
+            System.out.println("Helpers encontrados sem prefixo ROLE_: " + helpersWithoutPrefix.size());
+            helpers.addAll(helpersWithoutPrefix);
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar helpers sem prefixo: " + e.getMessage());
+        }
+
+        try {
+            List<User> helpersWithPrefix = userContextService.findUsersWithRole("ROLE_HELPER");
+            System.out.println("Helpers encontrados com prefixo ROLE_: " + helpersWithPrefix.size());
+            helpers.addAll(helpersWithPrefix);
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar helpers com prefixo: " + e.getMessage());
+        }
+
+        helpers = helpers.stream().distinct().collect(Collectors.toList());
+
+        System.out.println("Total de helpers únicos encontrados: " + helpers.size());
+
+        try {
+            List<User> admins = userContextService.findUsersWithRole("ADMIN");
+            System.out.println("Admins encontrados: " + admins.size());
+            helpers.addAll(admins);
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar admins: " + e.getMessage());
+        }
+
+        try {
+            List<User> adminsWithPrefix = userContextService.findUsersWithRole("ROLE_ADMIN");
+            System.out.println("Admins encontrados com prefixo ROLE_: " + adminsWithPrefix.size());
+            helpers.addAll(adminsWithPrefix);
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar admins com prefixo: " + e.getMessage());
+        }
+
+        helpers = helpers.stream().distinct().collect(Collectors.toList());
+
+        System.out.println("Total de usuários a notificar (helpers + admins): " + helpers.size());
+
+        for (User user : helpers) {
+            System.out.println("Usuário: " + user.getUsername() + ", ID: " + user.getId());
+            System.out.println("  Papéis: " + user.getRoles().stream()
+                    .map(Role::getName)
+                    .collect(Collectors.joining(", ")));
+
+            try {
+                criarNotificacaoParaUsuario(
+                        user.getId(),
+                        "Novo chamado disponível: " + chamado.getTitulo(),
+                        "NOVO_CHAMADO",
+                        chamado.getId()
+                );
+                System.out.println("  Notificação enviada com sucesso!");
+            } catch (Exception e) {
+                System.err.println("  Erro ao enviar notificação: " + e.getMessage());
+            }
         }
     }
 
@@ -74,7 +126,6 @@ public class NotificationService {
         User remetente = userRepository.findById(remetenteId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // Notificar o solicitante se a mensagem for do helper
         if (chamado.getUsuario() != null && !chamado.getUsuario().getId().equals(remetenteId)) {
             criarNotificacaoParaUsuario(
                     chamado.getUsuario().getId(),
@@ -84,7 +135,6 @@ public class NotificationService {
             );
         }
 
-        // Notificar o helper se a mensagem for do solicitante
         if (chamado.getHelper() != null && !chamado.getHelper().getId().equals(remetenteId)) {
             criarNotificacaoParaUsuario(
                     chamado.getHelper().getId(),
@@ -128,7 +178,7 @@ public class NotificationService {
     }
 
     private NotificationDto convertToDto(Notification notification) {
-        return new NotificationDto(
+        NotificationDto dto = new NotificationDto(
                 notification.getId(),
                 notification.getMessage(),
                 notification.getType(),
@@ -136,5 +186,8 @@ public class NotificationService {
                 notification.getChamadoId(),
                 notification.getCreatedAt()
         );
+
+        System.out.println("DTO criado: " + dto);
+        return dto;
     }
 }

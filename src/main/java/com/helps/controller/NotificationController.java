@@ -31,10 +31,9 @@ public class NotificationController {
             List<NotificationDto> notifications = notificationService.getUnreadNotifications(user.getId());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
-            // Log the error
+            e.printStackTrace();
             System.err.println("Erro ao buscar notificações não lidas: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.emptyList());
+            return ResponseEntity.ok(Collections.emptyList());
         }
     }
 

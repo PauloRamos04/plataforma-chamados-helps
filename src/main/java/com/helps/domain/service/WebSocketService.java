@@ -35,11 +35,19 @@ public class WebSocketService {
 
     public void enviarNotificacao(NotificationDto notification, User user) {
         if (user != null) {
-            messagingTemplate.convertAndSendToUser(
-                    user.getUsername(),
-                    "/queue/notifications",
-                    notification
-            );
+            try {
+                messagingTemplate.convertAndSendToUser(
+                        user.getUsername(),
+                        "/queue/notifications",
+                        notification
+                );
+                System.out.println("Mensagem enviada com sucesso via WebSocket");
+            } catch (Exception e) {
+                System.err.println("Erro ao enviar via WebSocket: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.err.println("Usuário é nulo, não é possível enviar notificação");
         }
     }
 
