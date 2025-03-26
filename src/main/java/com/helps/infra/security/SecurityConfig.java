@@ -30,6 +30,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -45,10 +46,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Important for CORS preflight
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll() // Only for development
-                        .requestMatchers("/ws/**").permitAll() // WebSockets need separate authentication
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
 
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
@@ -57,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/admin/users/{id}").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/admin/users/{id}/status").hasAuthority("ADMIN")
 
-                        .requestMatchers(HttpMethod.POST, "/users").permitAll() // Allow public registration
+                        .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
@@ -72,8 +76,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/chamados/{id}/mensagens").authenticated()
 
                         .anyRequest().authenticated())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions().sameOrigin())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
@@ -96,25 +98,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+        configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "https://helps-plataforms-frontend.vercel.app"
         ));
-        configuration.setAllowCredentials(true); // Mantém true
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("authorization", "content-type", "x-auth-token"));
-        configuration.setExposedHeaders(List.of("x-auth-token"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "authorization",
+                "content-type",
+                "x-auth-token",
+                "access-control-allow-origin"
+        ));
+        configuration.setExposedHeaders(Arrays.asList("x-auth-token", "authorization"));
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
-        CorsConfiguration wsConfiguration = new CorsConfiguration(configuration);
-        wsConfiguration.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "https://helps-plataforms-frontend.vercel.app"
-        ));
-        source.registerCorsConfiguration("/ws/**", wsConfiguration);
 
         return source;
     }
