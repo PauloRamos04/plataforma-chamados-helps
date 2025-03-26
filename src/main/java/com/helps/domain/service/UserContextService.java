@@ -35,9 +35,6 @@ public class UserContextService {
         String identifier = auth.getName();
         User user = null;
 
-        System.out.println("Identificador do usuário: " + identifier);
-        System.out.println("Tipo de autenticação: " + auth.getClass());
-
         Optional<User> userByUsername = userRepository.findByUsername(identifier);
         if (userByUsername.isPresent()) {
             return userByUsername.get();
@@ -108,10 +105,16 @@ public class UserContextService {
         }
 
         Role role = roleOpt.get();
-
-        return userRepository.findAll().stream()
-                .filter(user -> user.isEnabled() &&
-                        user.getRoles().stream().anyMatch(r -> r.getId().equals(role.getId())))
+        List<User> users = userRepository.findAll().stream()
+                .filter(user -> {
+                    boolean hasRole = user.isEnabled() &&
+                            user.getRoles().stream().anyMatch(r -> r.getId().equals(role.getId()));
+                    System.out.println("Usuário: " + user.getUsername() + ", Tem papel: " + hasRole);
+                    return hasRole;
+                })
                 .collect(Collectors.toList());
+
+        System.out.println("Total de usuários encontrados: " + users.size());
+        return users;
     }
 }

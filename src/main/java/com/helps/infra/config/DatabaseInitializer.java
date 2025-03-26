@@ -34,6 +34,8 @@ public class DatabaseInitializer implements CommandLineRunner {
     public void run(String... args) {
         initializeRoles();
         initializeAdminUser();
+        initializeHelperUser();
+        initializeOperatorlUser();
     }
 
     private void initializeRoles() {
@@ -71,6 +73,58 @@ public class DatabaseInitializer implements CommandLineRunner {
 
                     userRepository.save(adminUser);
                     System.out.println("Usuário admin criado com sucesso.");
+                }
+        );
+    }
+
+    private void initializeHelperUser() {
+        userRepository.findByUsername("helper").ifPresentOrElse(
+                user -> System.out.println("Usuário helper já existe."),
+                () -> {
+                    initializeRoles();
+
+                    Role helperRole = roleRepository.findByName(Role.Values.HELPER.name())
+                            .orElseGet(() -> {
+                                Role role = new Role();
+                                role.setName(Role.Values.HELPER.name());
+                                return roleRepository.save(role);
+                            });
+
+                    User helperUser = new User();
+                    helperUser.setUsername("helper");
+                    helperUser.setPassword(passwordEncoder.encode("123"));
+                    helperUser.setName("Helper");
+                    helperUser.setEnabled(true);
+                    helperUser.setRoles(Set.of(helperRole));
+
+                    userRepository.save(helperUser);
+                    System.out.println("Usuário helper criado com sucesso.");
+                }
+        );
+    }
+
+    private void initializeOperatorlUser() {
+        userRepository.findByUsername("user").ifPresentOrElse(
+                user -> System.out.println("Usuário user já existe."),
+                () -> {
+                    initializeRoles();
+
+                    Role userRole = roleRepository.findByName(Role.Values.USUARIO.name())
+                            .orElseGet(() -> {
+                                Role role = new Role();
+                                role.setName(Role.Values.USUARIO.name());
+                                return roleRepository.save(role);
+                            });
+
+                    User operatorUser = new User();
+                    operatorUser.setUsername("user");
+                    operatorUser.setPassword(passwordEncoder.encode("123"));
+                    operatorUser.setName("Usuário operator");
+                    operatorUser.setEnabled(true);
+                    operatorUser.setRoles(Set.of(userRole));
+
+                    userRepository.save(operatorUser);
+                    System.out.println("Usuário operator criado com sucesso.");
                 }
         );
     }

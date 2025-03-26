@@ -2,14 +2,12 @@ package com.helps.controller;
 
 import com.helps.domain.model.Role;
 import com.helps.domain.service.UserService;
-import com.helps.dto.CreateUserDto;
-import com.helps.dto.CreateUserWithRoleDto;
-import com.helps.dto.UpdateUserStatusDto;
-import com.helps.dto.UserResponseDto;
+import com.helps.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -67,6 +65,24 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/admin/users/{id}")
+    public ResponseEntity<UserResponseDto> updateUser(@PathVariable Long id, @RequestBody UpdateUserDto dto) {
+        try {
+            System.out.println("Recebendo solicitação PUT para atualizar usuário ID " + id + ": " + dto);
+            UserResponseDto updatedUser = userService.updateUser(id, dto);
+            return ResponseEntity.ok(updatedUser);
+        } catch (ResponseStatusException e) {
+            System.err.println("Erro ao atualizar usuário: " + e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            System.err.println("Erro inesperado ao atualizar usuário: " + e.getMessage());
+            e.printStackTrace();
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Erro interno ao atualizar usuário: " + e.getMessage());
+        }
     }
 
     @PatchMapping("/admin/users/{id}/status")
