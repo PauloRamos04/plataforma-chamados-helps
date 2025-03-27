@@ -1,4 +1,9 @@
 package com.helps.dto;
 
-public record MensagemDto(String conteudo) {
+import org.springframework.web.multipart.MultipartFile;
+
+public record MensagemDto(String conteudo, MultipartFile image) {
+    public MensagemDto(String conteudo) {
+        this(conteudo, null);
+    }
 }

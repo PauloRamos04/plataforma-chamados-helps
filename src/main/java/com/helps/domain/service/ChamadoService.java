@@ -3,6 +3,7 @@ package com.helps.domain.service;
 import com.helps.domain.model.Chamado;
 import com.helps.domain.model.User;
 import com.helps.domain.repository.ChamadoRepository;
+import com.helps.dto.ChamadoDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ public class ChamadoService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     public List<Chamado> listarChamados() {
         User currentUser = userContextService.getCurrentUser();
 
@@ -57,11 +61,44 @@ public class ChamadoService {
 
         Chamado chamadoSalvo = chamadoRepository.save(chamado);
 
-        // Notificar sobre o novo chamado - enviando para todos os helpers e admin, exceto o criador
         try {
             notificationService.notificarNovosChamados(chamadoSalvo);
         } catch (Exception e) {
-            // Log do erro, mas permite que a operação continue
+            System.err.println("Erro ao enviar notificações para o novo chamado: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return chamadoSalvo;
+    }
+
+    @Transactional
+    public Chamado abrirChamado(ChamadoDto chamadoDto) {
+        User solicitante = userContextService.getCurrentUser();
+
+        Chamado chamado = new Chamado();
+        chamado.setTitulo(chamadoDto.titulo());
+        chamado.setDescricao(chamadoDto.descricao());
+        chamado.setCategoria(chamadoDto.categoria());
+        chamado.setTipo(chamadoDto.tipo());
+        chamado.setDataAbertura(LocalDateTime.now());
+        chamado.setStatus("ABERTO");
+        chamado.setUsuario(solicitante);
+
+        if (chamadoDto.image() != null && !chamadoDto.image().isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(chamadoDto.image());
+                chamado.setImagePath(fileName);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Could not process the image: " + e.getMessage());
+            }
+        }
+
+        Chamado chamadoSalvo = chamadoRepository.save(chamado);
+
+        try {
+            notificationService.notificarNovosChamados(chamadoSalvo);
+        } catch (Exception e) {
             System.err.println("Erro ao enviar notificações para o novo chamado: " + e.getMessage());
             e.printStackTrace();
         }

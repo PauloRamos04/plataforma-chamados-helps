@@ -8,5 +8,17 @@ public record ChatMessageDto(
         Long senderId,
         String senderName,
         String content,
-        LocalDateTime timestamp
-) {}
+        LocalDateTime timestamp,
+        String imagePath
+) {
+    public ChatMessageDto(
+            String type,
+            Long chamadoId,
+            Long senderId,
+            String senderName,
+            String content,
+            LocalDateTime timestamp
+    ) {
+        this(type, chamadoId, senderId, senderName, content, timestamp, null);
+    }
+}

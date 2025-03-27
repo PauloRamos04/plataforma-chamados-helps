@@ -36,6 +36,9 @@ public class MensagemService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     public List<Mensagem> listarMensagensPorChamado(Long chamadoId) {
         Chamado chamado = chamadoRepository.findById(chamadoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
@@ -62,6 +65,16 @@ public class MensagemService {
         mensagem.setRemetente(remetente);
         mensagem.setConteudo(mensagemDTO.conteudo());
         mensagem.setDataEnvio(LocalDateTime.now());
+
+        if (mensagemDTO.image() != null && !mensagemDTO.image().isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(mensagemDTO.image());
+                mensagem.setImagePath(fileName);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Could not process the image: " + e.getMessage());
+            }
+        }
 
         Mensagem mensagemSalva = mensagemRepository.save(mensagem);
 

@@ -30,8 +30,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -53,6 +51,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+
+                        // Allow public access to files/downloads
+                        .requestMatchers("/api/files/download/**").permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
 
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
@@ -87,7 +89,9 @@ public class SecurityConfig {
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers("/ws/**");
+        return (web) -> web.ignoring()
+                .requestMatchers("/ws/**")
+                .requestMatchers("/api/files/download/**");
     }
 
     @Bean

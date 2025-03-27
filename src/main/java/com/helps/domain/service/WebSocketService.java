@@ -27,7 +27,8 @@ public class WebSocketService {
                 remetente.getId(),
                 remetente.getName() != null ? remetente.getName() : remetente.getUsername(),
                 mensagem.getConteudo(),
-                mensagem.getDataEnvio()
+                mensagem.getDataEnvio(),
+                mensagem.getImagePath()
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamadoId, chatMessage);
@@ -36,24 +37,19 @@ public class WebSocketService {
     public void enviarNotificacao(NotificationDto notification, User user) {
         if (user != null) {
             try {
-                // Enviar para o canal específico do usuário
                 String destination = "/user/" + user.getUsername() + "/queue/notifications";
                 messagingTemplate.convertAndSend(destination, notification);
 
-                // Enviar para o canal baseado no ID do usuário (fallback)
                 String idDestination = "/user/" + user.getId() + "/queue/notifications";
                 if (!destination.equals(idDestination)) {
                     messagingTemplate.convertAndSend(idDestination, notification);
                 }
-
-                // Log para debugar
-                System.out.println("Notificação enviada via WebSocket para " + user.getUsername() + " (ID: " + user.getId() + ")");
             } catch (Exception e) {
-                System.err.println("Erro ao enviar via WebSocket para " + user.getUsername() + ": " + e.getMessage());
+                System.err.println("Error sending via WebSocket to " + user.getUsername() + ": " + e.getMessage());
                 e.printStackTrace();
             }
         } else {
-            System.err.println("Usuário é nulo, não é possível enviar notificação");
+            System.err.println("User is null, cannot send notification");
         }
     }
 
@@ -64,12 +60,12 @@ public class WebSocketService {
                 null,
                 "Sistema",
                 evento,
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamado.getId(), statusMessage);
 
-        // Também notificar usuário e helper sobre mudança de status
         if (chamado.getUsuario() != null) {
             NotificationDto userNotification = new NotificationDto(
                     null,
@@ -114,7 +110,8 @@ public class WebSocketService {
                 userId,
                 username,
                 username + " entrou no chat",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamadoId, joinMessage);
@@ -127,7 +124,8 @@ public class WebSocketService {
                 userId,
                 username,
                 username + " saiu do chat",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
 
         messagingTemplate.convertAndSend("/topic/chamado/" + chamadoId, leaveMessage);
@@ -137,7 +135,7 @@ public class WebSocketService {
         try {
             messagingTemplate.convertAndSend("/topic/notifications", notification);
         } catch (Exception e) {
-            System.err.println("Erro ao enviar notificação global: " + e.getMessage());
+            System.err.println("Error sending global notification: " + e.getMessage());
         }
     }
 }

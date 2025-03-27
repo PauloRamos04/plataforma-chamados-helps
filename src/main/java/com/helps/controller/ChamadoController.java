@@ -2,10 +2,13 @@ package com.helps.controller;
 
 import com.helps.domain.model.Chamado;
 import com.helps.domain.service.ChamadoService;
+import com.helps.dto.ChamadoDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -31,6 +34,19 @@ public class ChamadoController {
     @PostMapping
     public ResponseEntity<Chamado> abrirChamado(@RequestBody Chamado chamado) {
         Chamado novoChamado = chamadoService.abrirChamado(chamado);
+        return ResponseEntity.status(HttpStatus.CREATED).body(novoChamado);
+    }
+
+    @PostMapping(value = "/with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Chamado> abrirChamadoComImagem(
+            @RequestParam("titulo") String titulo,
+            @RequestParam("descricao") String descricao,
+            @RequestParam("categoria") String categoria,
+            @RequestParam("tipo") String tipo,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
+
+        ChamadoDto chamadoDto = new ChamadoDto(titulo, descricao, categoria, tipo, image);
+        Chamado novoChamado = chamadoService.abrirChamado(chamadoDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(novoChamado);
     }
 

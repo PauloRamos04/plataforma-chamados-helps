@@ -6,6 +6,7 @@ import com.helps.dto.ChatMessageDto;
 import com.helps.dto.MensagemDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -14,16 +15,21 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/chamados/{chamadoId}/mensagens")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "false")
 public class MensagemController {
+
+    private static final Logger logger = LoggerFactory.getLogger(MensagemController.class);
 
     @Autowired
     private MensagemService mensagemService;
@@ -69,6 +75,43 @@ public class MensagemController {
         }
     }
 
+    @PostMapping(value = "/with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> enviarMensagemComImagem(
+            @PathVariable Long chamadoId,
+            @RequestParam("conteudo") String conteudo,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
+
+        logger.info("Receiving message with image for ticket: {}", chamadoId);
+
+        try {
+            if (conteudo == null || conteudo.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of(
+                                "error", "Bad Request",
+                                "message", "O conteúdo da mensagem é obrigatório"
+                        ));
+            }
+
+            logger.info("Message content: {}, has image: {}",
+                    conteudo, (image != null && !image.isEmpty()));
+
+            MensagemDto mensagemDTO = new MensagemDto(conteudo, image);
+            Mensagem mensagem = mensagemService.enviarMensagem(chamadoId, mensagemDTO);
+
+            notificarNovasMensagens(chamadoId, mensagem);
+            logger.info("Message with image sent successfully");
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(mensagem);
+        } catch (Exception e) {
+            logger.error("Error processing message with image", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "error", "Bad Request",
+                            "message", "Erro ao processar mensagem: " + e.getMessage()
+                    ));
+        }
+    }
+
     @GetMapping("/chat-history")
     public @ResponseBody List<ChatMessageDto> getChatHistory(@PathVariable Long chamadoId) {
         List<Mensagem> mensagens = mensagemService.listarMensagensPorChamado(chamadoId);
@@ -106,7 +149,8 @@ public class MensagemController {
                 chatMessage.senderId(),
                 chatMessage.senderName(),
                 chatMessage.senderName() + " entrou no chat",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                null
         );
     }
 
@@ -137,7 +181,8 @@ public class MensagemController {
                         mensagem.getRemetente().getName() :
                         mensagem.getRemetente().getUsername(),
                 mensagem.getConteudo(),
-                mensagem.getDataEnvio()
+                mensagem.getDataEnvio(),
+                mensagem.getImagePath()
         );
     }
 }

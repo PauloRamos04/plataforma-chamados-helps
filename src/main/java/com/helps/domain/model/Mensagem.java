@@ -25,6 +25,9 @@ public class Mensagem {
     @Column(name = "data_envio", nullable = false)
     private LocalDateTime dataEnvio;
 
+    @Column(name = "image_path")
+    private String imagePath;
+
     public Long getId() {
         return id;
     }
@@ -63,5 +66,13 @@ public class Mensagem {
 
     public void setDataEnvio(LocalDateTime dataEnvio) {
         this.dataEnvio = dataEnvio;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
 }

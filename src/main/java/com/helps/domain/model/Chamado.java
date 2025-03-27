@@ -35,6 +35,9 @@ public class Chamado {
     @Column(name = "data_fechamento")
     private LocalDateTime dataFechamento;
 
+    @Column(name = "image_path")
+    private String imagePath;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id")
     private User usuario;
@@ -129,5 +132,13 @@ public class Chamado {
 
     public void setDataInicio(LocalDateTime dataInicio) {
         this.dataInicio = dataInicio;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
 }
