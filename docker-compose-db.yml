@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    container_name: helps-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-helps}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helps_password}
+      POSTGRES_DB: ${POSTGRES_DB:-helps_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helps}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - helps-network
+
+  # pgAdmin for database management (opcional, remover em produção real)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: helps-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@helps.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-helps_admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - helps-network
+
+volumes:
+  postgres_data:
+    name: helps_postgres_data
+  pgadmin_data:
+    name: helps_pgadmin_data
+
+networks:
+  helps-network:
+    driver: bridge
+    name: helps_network

@@ -35,3 +35,5 @@ build/
 .env.local
 application-local.properties
 application-prod.properties
+
+docker-compose.prod.yml
