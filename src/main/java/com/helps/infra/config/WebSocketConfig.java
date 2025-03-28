@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         String[] allowedOrigins = websocketAllowedOrigins.split(",");
 
-        // Endpoints com SockJS (para navegadores sem suporte WebSocket nativo)
+        // Endpoints with SockJS (for browsers without native WebSocket support)
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(allowedOrigins)
                 .withSockJS()
@@ -27,32 +27,32 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setHeartbeatTime(25000)
                 .setDisconnectDelay(30000);
 
-        // Endpoints WebSocket nativos
+        // Native WebSocket endpoints
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(allowedOrigins);
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Habilitar broker de mensagens para canais de tópicos e filas
+        // Enable message broker for topic and queue channels
         registry.enableSimpleBroker(
-                "/topic",      // Para mensagens públicas (ex: chat)
-                "/queue",      // Para mensagens privadas
-                "/user"        // Para mensagens específicas do usuário
+                "/topic",
+                "/queue",
+                "/user"
         );
 
-        // Estabelecer prefixos para rotas de aplicação
+        // Set prefixes for application routes
         registry.setApplicationDestinationPrefixes("/app");
 
-        // Configurar prefixo para mensagens direcionadas a usuários específicos
+        // Configure prefix for messages directed to specific users
         registry.setUserDestinationPrefix("/user");
     }
 
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
-        // Configurar limites para mensagens WebSocket
-        registration.setMessageSizeLimit(128 * 1024)        // 128KB por mensagem
-                .setSendBufferSizeLimit(1024 * 1024)      // 1MB buffer de envio
-                .setSendTimeLimit(20000);                 // 20 segundos timeout
+        // Configure limits for WebSocket messages
+        registration.setMessageSizeLimit(128 * 1024)        // 128KB per message
+                .setSendBufferSizeLimit(1024 * 1024)      // 1MB send buffer
+                .setSendTimeLimit(20000);                 // 20 seconds timeout
     }
 }

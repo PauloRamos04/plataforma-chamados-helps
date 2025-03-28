@@ -1,9 +1,9 @@
 package com.helps.domain.service;
 
-import com.helps.domain.model.Chamado;
+import com.helps.domain.model.Ticket;
 import com.helps.domain.model.Notification;
 import com.helps.domain.model.User;
-import com.helps.domain.repository.ChamadoRepository;
+import com.helps.domain.repository.TicketRepository;
 import com.helps.domain.repository.NotificationRepository;
 import com.helps.domain.repository.UserRepository;
 import com.helps.dto.NotificationDto;
@@ -26,7 +26,7 @@ public class NotificationService {
     private UserRepository userRepository;
 
     @Autowired
-    private ChamadoRepository chamadoRepository;
+    private TicketRepository ticketRepository;
 
     @Autowired
     private WebSocketService webSocketService;
@@ -35,79 +35,79 @@ public class NotificationService {
     private UserContextService userContextService;
 
     @Transactional
-    public NotificationDto criarNotificacaoParaUsuario(Long userId, String message, String type, Long chamadoId) {
+    public NotificationDto createNotificationForUser(Long userId, String message, String type, Long ticketId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage(message);
         notification.setType(type);
         notification.setRead(false);
-        notification.setChamadoId(chamadoId);
+        notification.setTicketId(ticketId); // Previously chamadoId
         notification.setCreatedAt(LocalDateTime.now());
 
         notification = notificationRepository.save(notification);
         NotificationDto notificationDto = convertToDto(notification);
 
-        webSocketService.enviarNotificacao(notificationDto, user);
+        webSocketService.sendNotification(notificationDto, user);
 
         return notificationDto;
     }
 
-    public void notificarNovosChamados(Chamado chamado) {
-        // Obter o usuário atual que criou o chamado
-        User usuarioCriador = chamado.getUsuario();
-        Long usuarioCriadorId = usuarioCriador != null ? usuarioCriador.getId() : null;
+    public void notifyNewTickets(Ticket ticket) { // previously notificarNovosChamados
+        // Get the current user who created the ticket
+        User ticketCreator = ticket.getUser();
+        Long ticketCreatorId = ticketCreator != null ? ticketCreator.getId() : null;
 
-        // Buscar todos os usuários com role HELPER ou ADMIN (com ou sem prefixo ROLE_)
+        // Find all users with role HELPER or ADMIN (with or without ROLE_ prefix)
         List<User> usersToNotify = new ArrayList<>();
 
         try {
-            // Buscar helpers
+            // Find helpers
             List<User> helpers = userRepository.findAll().stream()
                     .filter(user -> user.isEnabled() &&
                             (hasRole(user, "HELPER") || hasRole(user, "ROLE_HELPER")))
                     .collect(Collectors.toList());
             usersToNotify.addAll(helpers);
 
-            // Buscar admins
+            // Find admins
             List<User> admins = userRepository.findAll().stream()
                     .filter(user -> user.isEnabled() &&
                             (hasRole(user, "ADMIN") || hasRole(user, "ROLE_ADMIN")))
                     .collect(Collectors.toList());
             usersToNotify.addAll(admins);
 
-            // Remover duplicados (caso um usuário tenha múltiplas roles)
+            // Remove duplicates (in case a user has multiple roles)
             usersToNotify = usersToNotify.stream()
                     .distinct()
                     .collect(Collectors.toList());
 
-            // Remover o usuário criador do chamado da lista (se estiver presente)
-            if (usuarioCriadorId != null) {
+            // Remove the user who created the ticket from the list (if present)
+            if (ticketCreatorId != null) {
                 usersToNotify = usersToNotify.stream()
-                        .filter(user -> !user.getId().equals(usuarioCriadorId))
+                        .filter(user -> !user.getId().equals(ticketCreatorId))
                         .collect(Collectors.toList());
             }
 
-            System.out.println("Total de usuários a notificar: " + usersToNotify.size());
+            System.out.println("Total users to notify: " + usersToNotify.size());
 
-            // Enviar notificações para cada destinatário
+            // Send notifications to each recipient
             for (User user : usersToNotify) {
                 try {
-                    criarNotificacaoParaUsuario(
+                    createNotificationForUser(
                             user.getId(),
-                            "Novo chamado disponível: " + chamado.getTitulo(),
-                            "NOVO_CHAMADO",
-                            chamado.getId()
+                            "New ticket available: " + ticket.getTitle(),
+                            "NEW_TICKET", // previously NOVO_CHAMADO
+                            ticket.getId()
                     );
-                    System.out.println("Notificação enviada para: " + user.getUsername());
+                    System.out.println("Notification sent to: " + user.getUsername());
                 } catch (Exception e) {
-                    System.err.println("Erro ao enviar notificação para " + user.getUsername() + ": " + e.getMessage());
+                    System.err.println("Error sending notification to " + user.getUsername() + ": " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            System.err.println("Erro ao processar notificações de novos chamados: " + e.getMessage());
+            System.err.println("Error processing new ticket notifications: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -117,28 +117,28 @@ public class NotificationService {
                 .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
     }
 
-    public void notificarMensagemRecebida(Long chamadoId, Long remetenteId, String conteudoResumido) {
-        Chamado chamado = chamadoRepository.findById(chamadoId)
-                .orElseThrow(() -> new RuntimeException("Chamado não encontrado"));
+    public void notifyMessageReceived(Long ticketId, Long senderId, String summarizedContent) { // previously notificarMensagemRecebida
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
-        User remetente = userRepository.findById(remetenteId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (chamado.getUsuario() != null && !chamado.getUsuario().getId().equals(remetenteId)) {
-            criarNotificacaoParaUsuario(
-                    chamado.getUsuario().getId(),
-                    "Nova mensagem de " + remetente.getName() + ": " + conteudoResumido,
-                    "NOVA_MENSAGEM",
-                    chamadoId
+        if (ticket.getUser() != null && !ticket.getUser().getId().equals(senderId)) {
+            createNotificationForUser(
+                    ticket.getUser().getId(),
+                    "New message from " + sender.getName() + ": " + summarizedContent,
+                    "NEW_MESSAGE", // previously NOVA_MENSAGEM
+                    ticketId
             );
         }
 
-        if (chamado.getHelper() != null && !chamado.getHelper().getId().equals(remetenteId)) {
-            criarNotificacaoParaUsuario(
-                    chamado.getHelper().getId(),
-                    "Nova mensagem de " + remetente.getName() + ": " + conteudoResumido,
-                    "NOVA_MENSAGEM",
-                    chamadoId
+        if (ticket.getHelper() != null && !ticket.getHelper().getId().equals(senderId)) {
+            createNotificationForUser(
+                    ticket.getHelper().getId(),
+                    "New message from " + sender.getName() + ": " + summarizedContent,
+                    "NEW_MESSAGE", // previously NOVA_MENSAGEM
+                    ticketId
             );
         }
     }
@@ -146,7 +146,7 @@ public class NotificationService {
     @Transactional
     public List<NotificationDto> getUnreadNotifications(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         return notificationRepository.findByUserAndReadFalseOrderByCreatedAtDesc(user)
                 .stream()
@@ -157,7 +157,7 @@ public class NotificationService {
     @Transactional
     public NotificationDto markAsRead(Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notificação não encontrada"));
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
 
         notification.setRead(true);
         notification = notificationRepository.save(notification);
@@ -168,7 +168,7 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<Notification> notifications = notificationRepository.findByUserAndReadFalse(user);
         notifications.forEach(notification -> notification.setRead(true));
@@ -181,7 +181,7 @@ public class NotificationService {
                 notification.getMessage(),
                 notification.getType(),
                 notification.isRead(),
-                notification.getChamadoId(),
+                notification.getTicketId(),
                 notification.getCreatedAt()
         );
     }

@@ -37,7 +37,7 @@ public class NotificationController {
             List<NotificationDto> notifications = notificationService.getUnreadNotifications(user.getId());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
-            System.err.println("Erro ao buscar notificações não lidas: " + e.getMessage());
+            System.err.println("Error fetching unread notifications: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -50,7 +50,7 @@ public class NotificationController {
             List<NotificationDto> notifications = notificationService.getUnreadNotifications(user.getId());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
-            System.err.println("Erro ao buscar todas as notificações: " + e.getMessage());
+            System.err.println("Error fetching all notifications: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -62,7 +62,7 @@ public class NotificationController {
             NotificationDto notification = notificationService.markAsRead(id);
             return ResponseEntity.ok(notification);
         } catch (Exception e) {
-            System.err.println("Erro ao marcar notificação como lida: " + e.getMessage());
+            System.err.println("Error marking notification as read: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -75,7 +75,7 @@ public class NotificationController {
             notificationService.markAllAsRead(user.getId());
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            System.err.println("Erro ao marcar todas as notificações como lidas: " + e.getMessage());
+            System.err.println("Error marking all notifications as read: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -94,7 +94,7 @@ public class NotificationController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            System.err.println("Erro ao contar notificações: " + e.getMessage());
+            System.err.println("Error counting notifications: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.ok(Map.of("total", 0, "unread", 0));
         }
@@ -105,21 +105,21 @@ public class NotificationController {
         try {
             User user = userContextService.getCurrentUser();
 
-            String message = (String) requestBody.getOrDefault("message", "Notificação de teste");
+            String message = (String) requestBody.getOrDefault("message", "Test notification");
             String type = (String) requestBody.getOrDefault("type", "TEST");
-            Long chamadoId = requestBody.get("chamadoId") instanceof Number ?
-                    ((Number) requestBody.get("chamadoId")).longValue() : null;
+            Long ticketId = requestBody.get("ticketId") instanceof Number ? // previously chamadoId
+                    ((Number) requestBody.get("ticketId")).longValue() : null;
 
-            NotificationDto notification = notificationService.criarNotificacaoParaUsuario(
+            NotificationDto notification = notificationService.createNotificationForUser(
                     user.getId(),
                     message,
                     type,
-                    chamadoId
+                    ticketId
             );
 
             return ResponseEntity.ok(notification);
         } catch (Exception e) {
-            System.err.println("Erro ao criar notificação de teste: " + e.getMessage());
+            System.err.println("Error creating test notification: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }

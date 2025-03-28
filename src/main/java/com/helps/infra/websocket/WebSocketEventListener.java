@@ -34,7 +34,7 @@ public class WebSocketEventListener {
         if(username != null && chamadoId != null) {
             logger.debug("Usuário desconectado: {}", username);
 
-            webSocketService.notificarSaidaUsuario(chamadoId, userId, username);
+            webSocketService.notifyUserExit(chamadoId, userId, username);
         }
     }
 }

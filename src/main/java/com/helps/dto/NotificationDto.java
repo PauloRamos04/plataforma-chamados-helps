@@ -7,6 +7,6 @@ public record NotificationDto(
         String message,
         String type,
         boolean read,
-        Long chamadoId,
+        Long ticketId,
         LocalDateTime createdAt
 ) {}
