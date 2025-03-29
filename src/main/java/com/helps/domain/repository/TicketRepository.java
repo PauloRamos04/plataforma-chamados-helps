@@ -13,7 +13,7 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByStatus(String status);
     List<Ticket> findByHelper(User helper);
-    List<Ticket> findByUser(User user); // previously findByUsuario
+    List<Ticket> findByUser(User user);
 
     @Query("SELECT t FROM Ticket t WHERE t.helper.id = :helperId OR t.status = :status")
     List<Ticket> findByHelperOrStatus(@Param("helperId") Long helperId, @Param("status") String status);

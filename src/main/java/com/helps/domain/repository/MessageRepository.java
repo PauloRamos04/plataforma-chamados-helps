@@ -9,5 +9,5 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
-    List<Message> findByTicketOrderBySentDateAsc(Ticket ticket); // previously findByChamadoOrderByDataEnvioAsc
+    List<Message> findByTicketOrderBySentDateAsc(Ticket ticket);
 }

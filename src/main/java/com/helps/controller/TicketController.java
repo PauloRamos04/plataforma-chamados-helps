@@ -52,7 +52,7 @@ public class TicketController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Ticket> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket) { // previously atualizarChamado
+    public ResponseEntity<Ticket> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket) {
         try {
             Ticket updatedTicket = ticketService.updateTicket(id, ticket);
             return ResponseEntity.ok(updatedTicket);

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "messages") // You can keep the database table as "mensagens" if needed with: @Table(name = "mensagens")
+@Table(name = "messages")
 public class Message {
 
     @Id
@@ -12,18 +12,18 @@ public class Message {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "ticket_id", nullable = false) // previously chamado_id
-    private Ticket ticket; // previously chamado
+    @JoinColumn(name = "ticket_id", nullable = false)
+    private Ticket ticket;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id", nullable = false) // previously remetente_id
-    private User sender; // previously remetente
+    @JoinColumn(name = "sender_id", nullable = false)
+    private User sender;
 
     @Column(nullable = false, length = 2000)
-    private String content; // previously conteudo
+    private String content;
 
-    @Column(name = "sent_date", nullable = false) // previously data_envio
-    private LocalDateTime sentDate; // previously dataEnvio
+    @Column(name = "sent_date", nullable = false)
+    private LocalDateTime sentDate;
 
     public Long getId() {
         return id;

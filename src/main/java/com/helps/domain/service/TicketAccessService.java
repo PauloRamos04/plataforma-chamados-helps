@@ -50,7 +50,7 @@ public class TicketAccessService {
         }
     }
 
-    public void verifyCloseTicketPermission(Ticket ticket) { // previously verificarPermissaoFecharChamado
+    public void verifyCloseTicketPermission(Ticket ticket) {
         User currentUser = userContextService.getCurrentUser();
 
         if (userContextService.hasAnyRole("ADMIN", "HELPER")) {
@@ -63,7 +63,7 @@ public class TicketAccessService {
                     "Only the assigned helper can close this ticket");
         }
 
-        if (!"IN_PROGRESS".equals(ticket.getStatus())) { // previously EM_ATENDIMENTO
+        if (!"EM_ATENDIMENTO".equals(ticket.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Only tickets in progress can be closed. Current status: " + ticket.getStatus());
         }
@@ -87,7 +87,7 @@ public class TicketAccessService {
                     "You don't have permission to send messages in this ticket");
         }
 
-        if (!"IN_PROGRESS".equals(ticket.getStatus())) { // previously EM_ATENDIMENTO
+        if (!"EM_ATENDIMENTO".equals(ticket.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot send messages to a ticket that is not in progress");
         }

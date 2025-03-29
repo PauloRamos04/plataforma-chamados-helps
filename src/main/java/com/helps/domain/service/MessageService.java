@@ -28,7 +28,7 @@ public class MessageService {
     private UserContextService userContextService;
 
     @Autowired
-    private TicketAccessService ticketAccessService; // previously ChamadoAccessService
+    private TicketAccessService ticketAccessService;
 
     @Autowired
     private WebSocketService webSocketService;
@@ -36,44 +36,44 @@ public class MessageService {
     @Autowired
     private NotificationService notificationService;
 
-    public List<Message> listMessagesByTicket(Long ticketId) { // previously listarMensagensPorChamado
+    public List<Message> listMessagesByTicket(Long ticketId) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
 
-        if (!ticketAccessService.canAccessTicket(ticket)) { // previously podeAcessarChamado
+        if (!ticketAccessService.canAccessTicket(ticket)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You don't have permission to access the messages of this ticket");
         }
 
-        return messageRepository.findByTicketOrderBySentDateAsc(ticket); // previously findByChamadoOrderByDataEnvioAsc
+        return messageRepository.findByTicketOrderBySentDateAsc(ticket);
     }
 
     @Transactional
-    public Message sendMessage(Long ticketId, MessageDto messageDTO) { // previously enviarMensagem
+    public Message sendMessage(Long ticketId, MessageDto messageDTO) {
         User sender = userContextService.getCurrentUser();
 
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
 
-        ticketAccessService.verifyMessagePermission(ticket); // previously verificarPermissaoEnviarMensagem
+        ticketAccessService.verifyMessagePermission(ticket);
 
         Message message = new Message();
-        message.setTicket(ticket); // previously setChamado
-        message.setSender(sender); // previously setRemetente
-        message.setContent(messageDTO.content()); // previously setConteudo
-        message.setSentDate(LocalDateTime.now()); // previously setDataEnvio
+        message.setTicket(ticket);
+        message.setSender(sender);
+        message.setContent(messageDTO.content());
+        message.setSentDate(LocalDateTime.now());
 
         Message savedMessage = messageRepository.save(message);
 
-        webSocketService.sendChatMessage(savedMessage); // previously enviarMensagemChat
+        webSocketService.sendChatMessage(savedMessage);
 
-        String summarizedContent = summarizeContent(messageDTO.content(), 50); // previously resumirConteudo
-        notificationService.notifyMessageReceived(ticketId, sender.getId(), summarizedContent); // previously notificarMensagemRecebida
+        String summarizedContent = summarizeContent(messageDTO.content(), 50);
+        notificationService.notifyMessageReceived(ticketId, sender.getId(), summarizedContent);
 
         return savedMessage;
     }
 
-    private String summarizeContent(String content, int maxLength) { // previously resumirConteudo
+    private String summarizeContent(String content, int maxLength) {
         if (content == null) return "";
         if (content.length() <= maxLength) return content;
 

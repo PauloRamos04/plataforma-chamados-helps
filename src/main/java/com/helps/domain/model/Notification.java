@@ -24,8 +24,8 @@ public class Notification {
     @Column(nullable = false)
     private boolean read;
 
-    @Column(name = "ticket_id") // previously chamado_id
-    private Long ticketId; // previously chamadoId
+    @Column(name = "ticket_id")
+    private Long ticketId;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -70,11 +70,11 @@ public class Notification {
         this.read = read;
     }
 
-    public Long getTicketId() { // previously getChamadoId
+    public Long getTicketId() {
         return ticketId;
     }
 
-    public void setTicketId(Long ticketId) { // previously setChamadoId
+    public void setTicketId(Long ticketId) {
         this.ticketId = ticketId;
     }
 

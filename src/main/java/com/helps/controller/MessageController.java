@@ -32,7 +32,7 @@ public class MessageController {
     private SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
-    public ResponseEntity<List<Message>> listMessages(@PathVariable Long ticketId) { // previously listarMensagens
+    public ResponseEntity<List<Message>> listMessages(@PathVariable Long ticketId) {
         try {
             List<Message> messages = messageService.listMessagesByTicket(ticketId);
             return ResponseEntity.ok(messages);
@@ -42,7 +42,7 @@ public class MessageController {
     }
 
     @PostMapping
-    public ResponseEntity<?> sendMessage(@PathVariable Long ticketId, @RequestBody Map<String, Object> requestBody) { // previously enviarMensagem
+    public ResponseEntity<?> sendMessage(@PathVariable Long ticketId, @RequestBody Map<String, Object> requestBody) {
         try {
             String content = extractContent(requestBody);
 
@@ -79,7 +79,7 @@ public class MessageController {
     }
 
     @MessageMapping("/chat.sendMessage/{ticketId}")
-    @SendTo("/topic/ticket/{ticketId}") // previously /topic/chamado/{chamadoId}
+    @SendTo("/topic/ticket/{ticketId}")
     public ChatMessageDto sendMessage(
             @DestinationVariable Long ticketId,
             @Payload ChatMessageDto chatMessage) {
@@ -91,7 +91,7 @@ public class MessageController {
     }
 
     @MessageMapping("/chat.addUser/{ticketId}")
-    @SendTo("/topic/ticket/{ticketId}") // previously /topic/chamado/{chamadoId}
+    @SendTo("/topic/ticket/{ticketId}")
     public ChatMessageDto addUser(
             @DestinationVariable Long ticketId,
             @Payload ChatMessageDto chatMessage,

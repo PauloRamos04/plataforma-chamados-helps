@@ -17,36 +17,33 @@ public class WebSocketService {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
-    public void sendChatMessage(Message message) { // previously enviarMensagemChat
-        Long ticketId = message.getTicket().getId(); // previously chamadoId
-        User sender = message.getSender(); // previously remetente
+    public void sendChatMessage(Message message) {
+        Long ticketId = message.getTicket().getId();
+        User sender = message.getSender();
 
         ChatMessageDto chatMessage = new ChatMessageDto(
                 "CHAT",
                 ticketId,
                 sender.getId(),
                 sender.getName() != null ? sender.getName() : sender.getUsername(),
-                message.getContent(), // previously getConteudo
-                message.getSentDate() // previously getDataEnvio
+                message.getContent(),
+                message.getSentDate()
         );
 
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, chatMessage); // previously /topic/chamado/
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, chatMessage);
     }
 
-    public void sendNotification(NotificationDto notification, User user) { // previously enviarNotificacao
+    public void sendNotification(NotificationDto notification, User user) {
         if (user != null) {
             try {
-                // Send to the user-specific channel
                 String destination = "/user/" + user.getUsername() + "/queue/notifications";
                 messagingTemplate.convertAndSend(destination, notification);
 
-                // Send to user ID-based channel (fallback)
                 String idDestination = "/user/" + user.getId() + "/queue/notifications";
                 if (!destination.equals(idDestination)) {
                     messagingTemplate.convertAndSend(idDestination, notification);
                 }
 
-                // Debug log
                 System.out.println("Notification sent via WebSocket to " + user.getUsername() + " (ID: " + user.getId() + ")");
             } catch (Exception e) {
                 System.err.println("Error sending via WebSocket to " + user.getUsername() + ": " + e.getMessage());
@@ -67,14 +64,13 @@ public class WebSocketService {
                 LocalDateTime.now()
         );
 
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticket.getId(), statusMessage); // previously /topic/chamado/
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticket.getId(), statusMessage);
 
-        // Also notify the user and helper about status change
         if (ticket.getUser() != null) {
             NotificationDto userNotification = new NotificationDto(
                     null,
                     "Ticket status #" + ticket.getId() + ": " + event,
-                    "TICKET_STATUS", // previously STATUS_CHAMADO
+                    "TICKET_STATUS",
                     false,
                     ticket.getId(),
                     LocalDateTime.now()
@@ -92,7 +88,7 @@ public class WebSocketService {
             NotificationDto helperNotification = new NotificationDto(
                     null,
                     "Ticket status #" + ticket.getId() + ": " + event,
-                    "TICKET_STATUS", // previously STATUS_CHAMADO
+                    "TICKET_STATUS",
                     false,
                     ticket.getId(),
                     LocalDateTime.now()
@@ -107,7 +103,7 @@ public class WebSocketService {
         }
     }
 
-    public void notifyUserEntry(Long ticketId, Long userId, String username) { // previously notificarEntradaUsuario
+    public void notifyUserEntry(Long ticketId, Long userId, String username) {
         ChatMessageDto joinMessage = new ChatMessageDto(
                 "JOIN",
                 ticketId,
@@ -117,10 +113,10 @@ public class WebSocketService {
                 LocalDateTime.now()
         );
 
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, joinMessage); // previously /topic/chamado/
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, joinMessage);
     }
 
-    public void notifyUserExit(Long ticketId, Long userId, String username) { // previously notificarSaidaUsuario
+    public void notifyUserExit(Long ticketId, Long userId, String username) {
         ChatMessageDto leaveMessage = new ChatMessageDto(
                 "LEAVE",
                 ticketId,
@@ -130,10 +126,10 @@ public class WebSocketService {
                 LocalDateTime.now()
         );
 
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, leaveMessage); // previously /topic/chamado/
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, leaveMessage);
     }
 
-    public void sendGlobalNotification(NotificationDto notification) { // previously enviarNotificacaoGlobal
+    public void sendGlobalNotification(NotificationDto notification) {
         try {
             messagingTemplate.convertAndSend("/topic/notifications", notification);
         } catch (Exception e) {

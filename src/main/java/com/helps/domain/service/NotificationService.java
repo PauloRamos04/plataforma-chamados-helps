@@ -44,7 +44,7 @@ public class NotificationService {
         notification.setMessage(message);
         notification.setType(type);
         notification.setRead(false);
-        notification.setTicketId(ticketId); // Previously chamadoId
+        notification.setTicketId(ticketId);
         notification.setCreatedAt(LocalDateTime.now());
 
         notification = notificationRepository.save(notification);
@@ -55,35 +55,29 @@ public class NotificationService {
         return notificationDto;
     }
 
-    public void notifyNewTickets(Ticket ticket) { // previously notificarNovosChamados
-        // Get the current user who created the ticket
+    public void notifyNewTickets(Ticket ticket) {
         User ticketCreator = ticket.getUser();
         Long ticketCreatorId = ticketCreator != null ? ticketCreator.getId() : null;
 
-        // Find all users with role HELPER or ADMIN (with or without ROLE_ prefix)
         List<User> usersToNotify = new ArrayList<>();
 
         try {
-            // Find helpers
             List<User> helpers = userRepository.findAll().stream()
                     .filter(user -> user.isEnabled() &&
                             (hasRole(user, "HELPER") || hasRole(user, "ROLE_HELPER")))
                     .collect(Collectors.toList());
             usersToNotify.addAll(helpers);
 
-            // Find admins
             List<User> admins = userRepository.findAll().stream()
                     .filter(user -> user.isEnabled() &&
                             (hasRole(user, "ADMIN") || hasRole(user, "ROLE_ADMIN")))
                     .collect(Collectors.toList());
             usersToNotify.addAll(admins);
 
-            // Remove duplicates (in case a user has multiple roles)
             usersToNotify = usersToNotify.stream()
                     .distinct()
                     .collect(Collectors.toList());
 
-            // Remove the user who created the ticket from the list (if present)
             if (ticketCreatorId != null) {
                 usersToNotify = usersToNotify.stream()
                         .filter(user -> !user.getId().equals(ticketCreatorId))
@@ -92,13 +86,12 @@ public class NotificationService {
 
             System.out.println("Total users to notify: " + usersToNotify.size());
 
-            // Send notifications to each recipient
             for (User user : usersToNotify) {
                 try {
                     createNotificationForUser(
                             user.getId(),
                             "New ticket available: " + ticket.getTitle(),
-                            "NEW_TICKET", // previously NOVO_CHAMADO
+                            "NEW_TICKET",
                             ticket.getId()
                     );
                     System.out.println("Notification sent to: " + user.getUsername());
@@ -117,7 +110,7 @@ public class NotificationService {
                 .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
     }
 
-    public void notifyMessageReceived(Long ticketId, Long senderId, String summarizedContent) { // previously notificarMensagemRecebida
+    public void notifyMessageReceived(Long ticketId, Long senderId, String summarizedContent) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Ticket not found"));
 
@@ -128,7 +121,7 @@ public class NotificationService {
             createNotificationForUser(
                     ticket.getUser().getId(),
                     "New message from " + sender.getName() + ": " + summarizedContent,
-                    "NEW_MESSAGE", // previously NOVA_MENSAGEM
+                    "NEW_MESSAGE",
                     ticketId
             );
         }
@@ -137,7 +130,7 @@ public class NotificationService {
             createNotificationForUser(
                     ticket.getHelper().getId(),
                     "New message from " + sender.getName() + ": " + summarizedContent,
-                    "NEW_MESSAGE", // previously NOVA_MENSAGEM
+                    "NEW_MESSAGE",
                     ticketId
             );
         }
