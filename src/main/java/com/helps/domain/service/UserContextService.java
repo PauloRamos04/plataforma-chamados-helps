@@ -77,7 +77,7 @@ public class UserContextService {
     public boolean hasRole(String role) {
         User user = getCurrentUser();
         return user.getRoles().stream()
-                .anyMatch(r -> r.getName().equals(role) || r.getName().equals("ROLE_" + role));
+                .anyMatch(r -> r.getName().equals(role));
     }
 
     public boolean hasAnyRole(String... roles) {
@@ -86,7 +86,7 @@ public class UserContextService {
                 .anyMatch(r -> {
                     String roleName = r.getName();
                     for (String role : roles) {
-                        if (roleName.equals(role) || roleName.equals("ROLE_" + role)) {
+                        if (roleName.equals(role) || roleName.equals(role)) {
                             return true;
                         }
                     }
@@ -97,7 +97,7 @@ public class UserContextService {
     public List<User> findUsersWithRole(String roleName) {
         Optional<Role> roleOpt = roleRepository.findByName(roleName);
         if (!roleOpt.isPresent()) {
-            roleOpt = roleRepository.findByName("ROLE_" + roleName);
+            roleOpt = roleRepository.findByName(roleName);
         }
 
         if (!roleOpt.isPresent()) {

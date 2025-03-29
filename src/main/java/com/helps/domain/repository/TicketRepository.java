@@ -15,8 +15,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByHelper(User helper);
     List<Ticket> findByUser(User user); // previously findByUsuario
 
-    @Query("SELECT t FROM Ticket t WHERE t.helper = :helper OR t.status = :status")
-    List<Ticket> findByHelperOrStatus(@Param("helper") User helper, @Param("status") String status);
+    @Query("SELECT t FROM Ticket t WHERE t.helper.id = :helperId OR t.status = :status")
+    List<Ticket> findByHelperOrStatus(@Param("helperId") Long helperId, @Param("status") String status);
 
     @Query("SELECT t FROM Ticket t WHERE t.status = 'OPEN' AND t.category = :category") // previously categoria
     List<Ticket> findOpenTicketsByCategory(@Param("category") String category);

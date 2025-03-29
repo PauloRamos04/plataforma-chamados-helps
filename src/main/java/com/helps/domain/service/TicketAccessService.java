@@ -13,10 +13,10 @@ public class TicketAccessService {
     @Autowired
     private UserContextService userContextService;
 
-    public boolean canAccessTicket(Ticket ticket) { // previously podeAcessarChamado
+    public boolean canAccessTicket(Ticket ticket) {
         User currentUser = userContextService.getCurrentUser();
 
-        if (userContextService.hasRole("ADMIN")) {
+        if (userContextService.hasAnyRole("ADMIN", "HELPER")) {
             return true;
         }
 
@@ -30,7 +30,7 @@ public class TicketAccessService {
             return true;
         }
 
-        if ("OPEN".equals(ticket.getStatus()) && // previously ABERTO
+        if ("OPEN".equals(ticket.getStatus()) &&
                 userContextService.hasRole("HELPER")) {
             return true;
         }
@@ -38,13 +38,13 @@ public class TicketAccessService {
         return false;
     }
 
-    public void verifyAssignTicketPermission(Ticket ticket) { // previously verificarPermissaoAderirChamado
+    public void verifyAssignTicketPermission(Ticket ticket) {
         if (!userContextService.hasAnyRole("HELPER", "ADMIN")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "User doesn't have permission to assign tickets. Required roles: HELPER or ADMIN");
         }
 
-        if (!"OPEN".equals(ticket.getStatus())) { // previously ABERTO
+        if (!"OPEN".equals(ticket.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Ticket is not available for assignment. Current status: " + ticket.getStatus());
         }
@@ -53,7 +53,7 @@ public class TicketAccessService {
     public void verifyCloseTicketPermission(Ticket ticket) { // previously verificarPermissaoFecharChamado
         User currentUser = userContextService.getCurrentUser();
 
-        if (userContextService.hasRole("ADMIN")) {
+        if (userContextService.hasAnyRole("ADMIN", "HELPER")) {
             return;
         }
 
@@ -69,10 +69,10 @@ public class TicketAccessService {
         }
     }
 
-    public void verifyMessagePermission(Ticket ticket) { // previously verificarPermissaoEnviarMensagem
+    public void verifyMessagePermission(Ticket ticket) {
         User currentUser = userContextService.getCurrentUser();
 
-        if (userContextService.hasRole("ADMIN")) {
+        if (userContextService.hasAnyRole("ADMIN","HELPER")) {
             return;
         }
 

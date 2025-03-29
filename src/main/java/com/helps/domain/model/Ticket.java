@@ -1,10 +1,13 @@
 package com.helps.domain.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tickets") // You can keep the database table as "chamados" if needed with: @Table(name = "chamados")
+@Table(name = "tickets")
 public class Ticket {
 
     @Id
@@ -12,36 +15,16 @@ public class Ticket {
     private Long id;
 
     @Column(nullable = false)
-    private String title; // previously titulo
+    private String title;
 
     @Column(nullable = false, length = 1000)
-    private String description; // previously descricao
+    private String description;
 
     @Column(nullable = false)
     private String status;
 
     @Column(nullable = false)
-    private String category; // previously categoria
-
-    @Column(nullable = false)
-    private String type; // previously tipo
-
-    @Column(name = "opening_date") // previously data_abertura
-    private LocalDateTime openingDate; // previously dataAbertura
-
-    @Column(name = "start_date") // previously data_inicio
-    private LocalDateTime startDate; // previously dataInicio
-
-    @Column(name = "closing_date") // previously data_fechamento
-    private LocalDateTime closingDate; // previously dataFechamento
-
-    @ManyToOne
-    @JoinColumn(name = "user_id") // previously usuario_id
-    private User user; // previously usuario
-
-    @ManyToOne
-    @JoinColumn(name = "helper_id")
-    private User helper;
+    private String category;
 
     public Long getId() {
         return id;
@@ -75,6 +58,22 @@ public class Ticket {
         this.status = status;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
     public LocalDateTime getOpeningDate() {
         return openingDate;
     }
@@ -83,12 +82,28 @@ public class Ticket {
         this.openingDate = openingDate;
     }
 
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
     public LocalDateTime getClosingDate() {
         return closingDate;
     }
 
     public void setClosingDate(LocalDateTime closingDate) {
         this.closingDate = closingDate;
+    }
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
 
     public User getUser() {
@@ -107,27 +122,26 @@ public class Ticket {
         this.helper = helper;
     }
 
-    public String getCategory() {
-        return category;
-    }
+    @Column(nullable = false)
+    private String type;
 
-    public void setCategory(String category) {
-        this.category = category;
-    }
+    @Column(name = "opening_date")
+    private LocalDateTime openingDate;
 
-    public String getType() {
-        return type;
-    }
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
 
-    public void setType(String type) {
-        this.type = type;
-    }
+    @Column(name = "closing_date")
+    private LocalDateTime closingDate;
 
-    public LocalDateTime getStartDate() {
-        return startDate;
-    }
+    @Column(name = "image_path")
+    private String imagePath;
 
-    public void setStartDate(LocalDateTime startDate) {
-        this.startDate = startDate;
-    }
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "helper_id")
+    private User helper;
 }

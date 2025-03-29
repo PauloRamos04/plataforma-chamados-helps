@@ -3,6 +3,7 @@ package com.helps.domain.service;
 import com.helps.domain.model.Ticket;
 import com.helps.domain.model.User;
 import com.helps.domain.repository.TicketRepository;
+import com.helps.dto.TicketDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,42 +32,85 @@ public class TicketService {
     @Autowired
     private NotificationService notificationService;
 
-    public List<Ticket> listTickets() { // previously listarChamados
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    public List<Ticket> listTickets() {
         User currentUser = userContextService.getCurrentUser();
 
-        if (userContextService.hasRole("ADMIN")) {
-            return ticketRepository.findAll();
-        } else if (userContextService.hasRole("HELPER")) {
-            return ticketRepository.findByHelperOrStatus(currentUser, "OPEN"); // previously ABERTO
-        } else {
-            return ticketRepository.findByUser(currentUser); // previously findByUsuario
-        }
-    }
+        boolean isHelper = userContextService.hasAnyRole("HELPER");
+        boolean isAdmin = userContextService.hasAnyRole("ADMIN");
 
-    public List<Ticket> listTicketsByStatus(String status) { // previously listarChamadosPorStatus
-        return ticketRepository.findByStatus(status);
+        System.out.println("Current user: " + currentUser.getUsername() +
+                ", isHelper: " + isHelper +
+                ", isAdmin: " + isAdmin);
+
+        if (isAdmin) {
+            return ticketRepository.findAll();
+        } else if (isHelper) {
+            List<Ticket> allTickets = ticketRepository.findAll();
+            System.out.println("Found " + allTickets.size() + " total tickets");
+            return allTickets;
+        } else {
+            List<Ticket> userTickets = ticketRepository.findByUser(currentUser);
+            System.out.println("Found " + userTickets.size() + " user tickets");
+            return userTickets;
+        }
     }
 
     @Transactional
-    public Ticket openTicket(Ticket ticket) { // previously abrirChamado
-        User requester = userContextService.getCurrentUser();
+    public Ticket openTicket(Ticket ticket) {
+        User solicitante = userContextService.getCurrentUser();
 
-        ticket.setOpeningDate(LocalDateTime.now()); // previously setDataAbertura
-        ticket.setStatus("OPEN"); // previously ABERTO
-        ticket.setUser(requester); // previously setUsuario
+        ticket.setOpeningDate(LocalDateTime.now());
+        ticket.setStatus("ABERTO");
+        ticket.setUser(solicitante);
 
-        Ticket savedTicket = ticketRepository.save(ticket);
+        Ticket saveTicket = ticketRepository.save(ticket);
 
-        // Notify about the new ticket - sending to all helpers and admin, except the creator
         try {
-            notificationService.notifyNewTickets(savedTicket); // previously notificarNovosChamados
+            notificationService.notifyNewTickets(saveTicket);
         } catch (Exception e) {
-            // Log the error, but allow the operation to continue
-            System.err.println("Error sending notifications for the new ticket: " + e.getMessage());
+            System.err.println("Erro ao enviar notificações para o novo chamado: " + e.getMessage());
             e.printStackTrace();
         }
 
-        return savedTicket;
+        return saveTicket;
+    }
+
+    @Transactional
+    public Ticket openTicketImage(TicketDto ticketDto) {
+        User solicitante = userContextService.getCurrentUser();
+
+        Ticket ticket = new Ticket();
+        ticket.setTitle(ticketDto.title());
+        ticket.setDescription(ticketDto.description());
+        ticket.setCategory(ticketDto.description());
+        ticket.setType(ticketDto.description());
+        ticket.setStartDate(LocalDateTime.now());
+        ticket.setStatus("ABERTO");
+        ticket.setUser(solicitante);
+
+        if (ticketDto.image() != null && !ticketDto.image().isEmpty()) {
+            try {
+                String fileName = fileStorageService.storeFile(ticketDto.image());
+                ticket.setImagePath(fileName);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Could not process the image: " + e.getMessage());
+            }
+        }
+
+        Ticket saveTicket = ticketRepository.save(ticket);
+
+        try {
+            notificationService.notifyNewTickets(saveTicket);
+        } catch (Exception e) {
+            System.err.println("Erro ao enviar notificações para o novo chamado: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return saveTicket;
     }
 
     @Transactional
@@ -124,27 +168,27 @@ public class TicketService {
     }
 
     @Transactional
-    public Ticket assignTicket(Long id) { // previously aderirChamado
+    public Ticket assignTicket(Long id) {
         User helper = userContextService.getCurrentUser();
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
 
-        ticketAccessService.verifyAssignTicketPermission(ticket); // previously verificarPermissaoAderirChamado
+        ticketAccessService.verifyAssignTicketPermission(ticket);
 
         ticket.setHelper(helper);
-        ticket.setStatus("IN_PROGRESS"); // previously EM_ATENDIMENTO
-        ticket.setStartDate(LocalDateTime.now()); // previously setDataInicio
+        ticket.setStatus("IN_PROGRESS");
+        ticket.setStartDate(LocalDateTime.now());
 
         Ticket updatedTicket = ticketRepository.save(ticket);
 
-        webSocketService.notifyTicketStatus(updatedTicket, // previously notificarStatusChamado
+        webSocketService.notifyTicketStatus(updatedTicket,
                 helper.getName() + " started attending this ticket");
 
         if (ticket.getUser() != null) {
-            notificationService.createNotificationForUser( // previously criarNotificacaoParaUsuario
+            notificationService.createNotificationForUser(
                     ticket.getUser().getId(),
                     "Your ticket \"" + ticket.getTitle() + "\" is now being attended by " + helper.getName(),
-                    "TICKET_IN_PROGRESS", // previously CHAMADO_EM_ATENDIMENTO
+                    "TICKET_IN_PROGRESS",
                     ticket.getId());
         }
 

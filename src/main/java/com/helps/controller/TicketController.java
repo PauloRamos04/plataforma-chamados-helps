@@ -2,35 +2,51 @@ package com.helps.controller;
 
 import com.helps.domain.model.Ticket;
 import com.helps.domain.service.TicketService;
+import com.helps.dto.TicketDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/chamados") // Keeping the endpoint URL the same
+@RequestMapping("/chamados")
 public class TicketController {
 
     @Autowired
     private TicketService ticketService;
 
     @GetMapping
-    public List<Ticket> listTickets() { // previously listarChamados
+    public List<Ticket> listTickets() {
         return ticketService.listTickets();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Ticket> getTicketById(@PathVariable Long id) { // previously buscarChamado
+    public ResponseEntity<Ticket> getTicketById(@PathVariable Long id) {
         return ticketService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Ticket> openTicket(@RequestBody Ticket ticket) { // previously abrirChamado
+    public ResponseEntity<Ticket> openTicket(@RequestBody Ticket ticket) {
         Ticket newTicket = ticketService.openTicket(ticket);
+        return ResponseEntity.status(HttpStatus.CREATED).body(newTicket);
+    }
+
+    @PostMapping(value = "/with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Ticket> abrirChamadoComImagem(
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("category") String category,
+            @RequestParam("type") String type,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
+
+        TicketDto ticketDto = new TicketDto(title, description, category, type, image);
+        Ticket newTicket = ticketService.openTicketImage(ticketDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(newTicket);
     }
 
