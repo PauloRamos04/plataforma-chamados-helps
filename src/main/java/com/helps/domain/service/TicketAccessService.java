@@ -44,7 +44,7 @@ public class TicketAccessService {
                     "User doesn't have permission to assign tickets. Required roles: HELPER or ADMIN");
         }
 
-        if (!"OPEN".equals(ticket.getStatus())) {
+        if (!"ABERTO".equals(ticket.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Ticket is not available for assignment. Current status: " + ticket.getStatus());
         }

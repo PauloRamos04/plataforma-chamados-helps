@@ -24,7 +24,7 @@ public class TicketService {
     private UserContextService userContextService;
 
     @Autowired
-    private TicketAccessService ticketAccessService; // previously ChamadoAccessService
+    private TicketAccessService ticketAccessService;
 
     @Autowired
     private WebSocketService webSocketService;
@@ -114,23 +114,23 @@ public class TicketService {
     }
 
     @Transactional
-    public Ticket updateTicket(Long id, Ticket updatedTicket) { // previously atualizarChamado
+    public Ticket updateTicket(Long id, Ticket updatedTicket) {
         return ticketRepository.findById(id)
                 .map(ticket -> {
-                    if (!ticketAccessService.canAccessTicket(ticket)) { // previously podeAcessarChamado
+                    if (!ticketAccessService.canAccessTicket(ticket)) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                                 "You don't have permission to update this ticket");
                     }
 
-                    ticket.setTitle(updatedTicket.getTitle()); // previously setTitulo
-                    ticket.setDescription(updatedTicket.getDescription()); // previously setDescricao
+                    ticket.setTitle(updatedTicket.getTitle());
+                    ticket.setDescription(updatedTicket.getDescription());
 
                     if (userContextService.hasRole("ADMIN") && updatedTicket.getStatus() != null) {
                         String previousStatus = ticket.getStatus();
                         ticket.setStatus(updatedTicket.getStatus());
 
                         if (!previousStatus.equals(updatedTicket.getStatus())) {
-                            webSocketService.notifyTicketStatus(ticket, // previously notificarStatusChamado
+                            webSocketService.notifyTicketStatus(ticket,
                                     "Status changed from " + previousStatus + " to " + ticket.getStatus());
                         }
                     }
@@ -141,24 +141,24 @@ public class TicketService {
     }
 
     @Transactional
-    public void closeTicket(Long id) { // previously fecharChamado
+    public void closeTicket(Long id) {
         ticketRepository.findById(id)
                 .map(ticket -> {
-                    ticketAccessService.verifyCloseTicketPermission(ticket); // previously verificarPermissaoFecharChamado
+                    ticketAccessService.verifyCloseTicketPermission(ticket);
 
-                    ticket.setStatus("CLOSED"); // previously FECHADO
-                    ticket.setClosingDate(LocalDateTime.now()); // previously setDataFechamento
+                    ticket.setStatus("FECHADO");
+                    ticket.setClosingDate(LocalDateTime.now());
 
                     Ticket closedTicket = ticketRepository.save(ticket);
 
-                    webSocketService.notifyTicketStatus(closedTicket, // previously notificarStatusChamado
+                    webSocketService.notifyTicketStatus(closedTicket,
                             "Ticket finalized by " + userContextService.getCurrentUser().getName());
 
                     if (ticket.getUser() != null) {
-                        notificationService.createNotificationForUser( // previously criarNotificacaoParaUsuario
+                        notificationService.createNotificationForUser(
                                 ticket.getUser().getId(),
                                 "Your ticket \"" + ticket.getTitle() + "\" has been closed",
-                                "TICKET_CLOSED", // previously CHAMADO_FECHADO
+                                "CHAMADO_FECHADO",
                                 ticket.getId());
                     }
 
@@ -171,31 +171,31 @@ public class TicketService {
     public Ticket assignTicket(Long id) {
         User helper = userContextService.getCurrentUser();
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Chamado não encontrado"));
 
         ticketAccessService.verifyAssignTicketPermission(ticket);
 
         ticket.setHelper(helper);
-        ticket.setStatus("IN_PROGRESS");
+        ticket.setStatus("EM_ATENDIMENTO");
         ticket.setStartDate(LocalDateTime.now());
 
         Ticket updatedTicket = ticketRepository.save(ticket);
 
         webSocketService.notifyTicketStatus(updatedTicket,
-                helper.getName() + " started attending this ticket");
+                helper.getName() + " começou a atender este chamado");
 
         if (ticket.getUser() != null) {
             notificationService.createNotificationForUser(
                     ticket.getUser().getId(),
-                    "Your ticket \"" + ticket.getTitle() + "\" is now being attended by " + helper.getName(),
-                    "TICKET_IN_PROGRESS",
+                    "O seu chamado \"" + ticket.getTitle() + "\" começou a ser atendido por " + helper.getName(),
+                    "CHAMADO_EM_ATENDIMENTO",
                     ticket.getId());
         }
 
         return updatedTicket;
     }
 
-    public List<Ticket> listTicketsByHelper() { // previously listarChamadosPorHelper
+    public List<Ticket> listTicketsByHelper() {
         User helper = userContextService.getCurrentUser();
 
         if (!userContextService.hasAnyRole("HELPER", "ADMIN")) {
@@ -206,16 +206,16 @@ public class TicketService {
         return ticketRepository.findByHelper(helper);
     }
 
-    public List<Ticket> listTicketsByUser() { // previously listarChamadosPorUsuario
+    public List<Ticket> listTicketsByUser() {
         User user = userContextService.getCurrentUser();
-        return ticketRepository.findByUser(user); // previously findByUsuario
+        return ticketRepository.findByUser(user);
     }
 
-    public Optional<Ticket> findById(Long id) { // previously buscarPorId
+    public Optional<Ticket> findById(Long id) {
         Optional<Ticket> ticketOpt = ticketRepository.findById(id);
 
         ticketOpt.ifPresent(ticket -> {
-            if (!ticketAccessService.canAccessTicket(ticket)) { // previously podeAcessarChamado
+            if (!ticketAccessService.canAccessTicket(ticket)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "You don't have permission to access this ticket");
             }

@@ -57,7 +57,7 @@ public class WebSocketService {
         }
     }
 
-    public void notifyTicketStatus(Ticket ticket, String event) { // previously notificarStatusChamado
+    public void notifyTicketStatus(Ticket ticket, String event) {
         ChatMessageDto statusMessage = new ChatMessageDto(
                 "STATUS",
                 ticket.getId(),

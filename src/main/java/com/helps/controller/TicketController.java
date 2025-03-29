@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -61,17 +62,19 @@ public class TicketController {
     }
 
     @RequestMapping(value = "/{id}/aderir", method = {RequestMethod.POST, RequestMethod.PATCH})
-    public ResponseEntity<Ticket> assignTicket(@PathVariable Long id) { // previously aderirChamado
+    public ResponseEntity<Ticket> assignTicket(@PathVariable Long id) {
         try {
             Ticket ticket = ticketService.assignTicket(id);
             return ResponseEntity.ok(ticket);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(null);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
     @RequestMapping(value = {"/{id}/fechar", "/{id}/finalizar"}, method = {RequestMethod.POST, RequestMethod.PATCH})
-    public ResponseEntity<Void> closeTicket(@PathVariable Long id) { // previously fecharChamado
+    public ResponseEntity<Void> closeTicket(@PathVariable Long id) {
         try {
             ticketService.closeTicket(id);
             return ResponseEntity.ok().build();
