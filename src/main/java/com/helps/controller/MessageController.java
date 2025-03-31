@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/chamados/{ticketId}/mensagens") // Keeping the endpoint URL the same
+@RequestMapping("/chamados/{ticketId}/mensagens")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "false")
 public class MessageController {
 
@@ -98,7 +98,7 @@ public class MessageController {
             SimpMessageHeaderAccessor headerAccessor) {
 
         headerAccessor.getSessionAttributes().put("username", chatMessage.senderName());
-        headerAccessor.getSessionAttributes().put("ticketId", ticketId); // previously chamadoId
+        headerAccessor.getSessionAttributes().put("ticketId", ticketId);
 
         return new ChatMessageDto(
                 "JOIN",
@@ -125,7 +125,7 @@ public class MessageController {
 
     private void notifyNewMessages(Long ticketId, Message message) {
         ChatMessageDto chatMessage = convertToChatMessageDto(message);
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, chatMessage); // previously /topic/chamado/
+        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, chatMessage);
     }
 
     private ChatMessageDto convertToChatMessageDto(Message message) {

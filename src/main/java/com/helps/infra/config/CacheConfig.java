@@ -16,7 +16,7 @@ public class CacheConfig {
         cacheManager.setCacheNames(java.util.Arrays.asList(
                 "users",
                 "roles",
-                "chamados",
+                "tickets",
                 "notifications"
         ));
         return cacheManager;

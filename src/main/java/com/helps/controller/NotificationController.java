@@ -107,7 +107,7 @@ public class NotificationController {
 
             String message = (String) requestBody.getOrDefault("message", "Test notification");
             String type = (String) requestBody.getOrDefault("type", "TEST");
-            Long ticketId = requestBody.get("ticketId") instanceof Number ? // previously chamadoId
+            Long ticketId = requestBody.get("ticketId") instanceof Number ?
                     ((Number) requestBody.get("ticketId")).longValue() : null;
 
             NotificationDto notification = notificationService.createNotificationForUser(
