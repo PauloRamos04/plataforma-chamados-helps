@@ -1,6 +1,9 @@
 package com.helps.domain.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,33 +23,8 @@ public class Ticket {
     @Column(nullable = false)
     private String status;
 
-    @ManyToOne
-    @JoinColumn(name = "category_id")
-    private Category category;
-
-    @ManyToOne
-    @JoinColumn(name = "type_id")
-    private TicketType type;
-
-    @Column(name = "opening_date")
-    private LocalDateTime openingDate;
-
-    @Column(name = "start_date")
-    private LocalDateTime startDate;
-
-    @Column(name = "closing_date")
-    private LocalDateTime closingDate;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "helper_id")
-    private User helper;
-
-    @Column(name = "image_path")
-    private String imagePath;
+    @Column(nullable = false)
+    private String category;
 
     public Long getId() {
         return id;
@@ -80,46 +58,20 @@ public class Ticket {
         this.status = status;
     }
 
-    public Category getCategory() {
+    public String getCategory() {
         return category;
     }
 
-    public void setCategory(Category category) {
+    public void setCategory(String category) {
         this.category = category;
     }
 
-    // Método adicional para compatibilidade com código existente
-    public void setCategory(String categoryName) {
-        // Esta é uma implementação temporária que pode ser substituída
-        // por uma busca real no repositório de categorias
-        if (this.category == null) {
-            Category tempCategory = new Category();
-            tempCategory.setName(categoryName);
-            this.category = tempCategory;
-        } else {
-            this.category.setName(categoryName);
-        }
-    }
-
-    public TicketType getType() {
+    public String getType() {
         return type;
     }
 
-    public void setType(TicketType type) {
+    public void setType(String type) {
         this.type = type;
-    }
-
-    // Método adicional para compatibilidade com código existente
-    public void setType(String typeName) {
-        // Esta é uma implementação temporária que pode ser substituída
-        // por uma busca real no repositório de tipos
-        if (this.type == null) {
-            TicketType tempType = new TicketType();
-            tempType.setName(typeName);
-            this.type = tempType;
-        } else {
-            this.type.setName(typeName);
-        }
     }
 
     public LocalDateTime getOpeningDate() {
@@ -146,6 +98,14 @@ public class Ticket {
         this.closingDate = closingDate;
     }
 
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+
     public User getUser() {
         return user;
     }
@@ -162,20 +122,26 @@ public class Ticket {
         this.helper = helper;
     }
 
-    public String getImagePath() {
-        return imagePath;
-    }
+    @Column(nullable = false)
+    private String type;
 
-    public void setImagePath(String imagePath) {
-        this.imagePath = imagePath;
-    }
+    @Column(name = "opening_date")
+    private LocalDateTime openingDate;
 
-    // Métodos auxiliares para compatibilidade com código existente
-    public String getCategoryName() {
-        return category != null ? category.getName() : null;
-    }
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
 
-    public String getTypeName() {
-        return type != null ? type.getName() : null;
-    }
+    @Column(name = "closing_date")
+    private LocalDateTime closingDate;
+
+    @Column(name = "image_path")
+    private String imagePath;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "helper_id")
+    private User helper;
 }
