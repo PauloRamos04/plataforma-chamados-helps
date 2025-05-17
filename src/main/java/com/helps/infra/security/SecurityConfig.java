@@ -47,12 +47,11 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Important for CORS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
-                        // Allow public access to files/downloads
                         .requestMatchers("/api/files/download/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
@@ -67,7 +66,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, "/chamados/{id}").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
@@ -75,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
 
+                        .requestMatchers(HttpMethod.GET, "/chamados/{id}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/chamados/{id}/mensagens").authenticated()
                         .requestMatchers(HttpMethod.GET, "/chamados/{id}/mensagens").authenticated()
 

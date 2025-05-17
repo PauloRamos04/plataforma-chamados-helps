@@ -66,14 +66,6 @@ public class Ticket {
         this.category = category;
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
     public LocalDateTime getOpeningDate() {
         return openingDate;
     }
@@ -122,8 +114,6 @@ public class Ticket {
         this.helper = helper;
     }
 
-    @Column(nullable = false)
-    private String type;
 
     @Column(name = "opening_date")
     private LocalDateTime openingDate;

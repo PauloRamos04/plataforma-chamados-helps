@@ -43,10 +43,9 @@ public class TicketController {
             @RequestParam("title") String title,
             @RequestParam("description") String description,
             @RequestParam("category") String category,
-            @RequestParam("type") String type,
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
-        TicketDto ticketDto = new TicketDto(title, description, category, type, image);
+        TicketDto ticketDto = new TicketDto(title, description, category, image);
         Ticket newTicket = ticketService.openTicketImage(ticketDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(newTicket);
     }

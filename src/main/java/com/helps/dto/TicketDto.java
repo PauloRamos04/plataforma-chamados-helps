@@ -6,6 +6,5 @@ public record TicketDto(
         String title,
         String description,
         String category,
-        String type,
         MultipartFile image
 ) {}

@@ -83,10 +83,10 @@ public class TicketService {
         User solicitante = userContextService.getCurrentUser();
 
         Ticket ticket = new Ticket();
+        ticket.setOpeningDate(LocalDateTime.now());
         ticket.setTitle(ticketDto.title());
         ticket.setDescription(ticketDto.description());
-        ticket.setCategory(ticketDto.description());
-        ticket.setType(ticketDto.description());
+        ticket.setCategory(ticketDto.category());
         ticket.setStartDate(LocalDateTime.now());
         ticket.setStatus("ABERTO");
         ticket.setUser(solicitante);
