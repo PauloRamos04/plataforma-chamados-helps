@@ -37,3 +37,6 @@ application-local.properties
 application-prod.properties
 
 docker-compose.prod.yml
+/uploads/
+/.env
+/nginx/
