@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/chamados/{ticketId}/mensagens")
+@RequestMapping("/tickets/{ticketId}/mensagens")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "false")
 public class MessageController {
 
