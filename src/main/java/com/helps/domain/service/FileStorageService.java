@@ -23,30 +23,53 @@ public class FileStorageService {
     public FileStorageService(@Value("${file.upload-dir:./uploads}") String uploadDir) throws IOException {
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(this.fileStorageLocation);
+        System.out.println("Diretório de upload inicializado em: " + this.fileStorageLocation);
     }
 
     public String storeFile(MultipartFile file) throws IOException {
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+        // Verificação de segurança para o nome do arquivo
+        String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
+        if (originalFileName.contains("..")) {
+            throw new IOException("Nome de arquivo inválido: " + originalFileName);
+        }
+
+        // Gerar nome único para o arquivo (UUID + extensão original)
         String fileExtension = "";
-        if (fileName.contains(".")) {
-            fileExtension = fileName.substring(fileName.lastIndexOf("."));
+        int lastDotIndex = originalFileName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            fileExtension = originalFileName.substring(lastDotIndex);
         }
 
         String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
         Path targetLocation = this.fileStorageLocation.resolve(uniqueFileName);
+
+        System.out.println("Salvando arquivo em: " + targetLocation);
+
+        // Copia o arquivo para o destino
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-        return uniqueFileName;
+        // MUITO IMPORTANTE: Retorna o caminho correto para ser armazenado no banco de dados
+        // Este caminho deve ser consistente com sua configuração de recursos estáticos
+        return "/uploads/" + uniqueFileName;
     }
 
     public Resource loadFileAsResource(String fileName) throws MalformedURLException {
-        Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-        Resource resource = new UrlResource(filePath.toUri());
+        try {
+            // Remove qualquer prefixo de caminho como "/uploads/" se presente
+            if (fileName.startsWith("/uploads/")) {
+                fileName = fileName.substring("/uploads/".length());
+            }
 
-        if(resource.exists()) {
-            return resource;
-        } else {
-            throw new RuntimeException("File not found " + fileName);
+            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists()) {
+                return resource;
+            } else {
+                throw new MalformedURLException("Arquivo não encontrado: " + fileName);
+            }
+        } catch (MalformedURLException ex) {
+            throw new MalformedURLException("Arquivo não encontrado: " + fileName);
         }
     }
 }
