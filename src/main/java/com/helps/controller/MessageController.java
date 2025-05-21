@@ -6,6 +6,7 @@ import com.helps.dto.ChatMessageDto;
 import com.helps.dto.MessageDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -14,6 +15,8 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,6 +64,42 @@ public class MessageController {
 
             return ResponseEntity.status(HttpStatus.CREATED).body(message);
         } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "error", "Bad Request",
+                            "message", "Error processing message: " + e.getMessage()
+                    ));
+        }
+    }
+
+    @PostMapping(value = "/with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> sendMessageWithImage(
+            @PathVariable Long ticketId,
+            @RequestParam(value = "content", required = false, defaultValue = "") String content,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
+
+        try {
+            // Validar que ao menos um dos dois (conteúdo ou imagem) está presente
+            if ((content == null || content.trim().isEmpty()) && (image == null || image.isEmpty())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of(
+                                "error", "Bad Request",
+                                "message", "A mensagem deve ter texto ou imagem"
+                        ));
+            }
+
+            // Usar conteúdo padrão se apenas imagem for fornecida
+            if (content == null || content.trim().isEmpty()) {
+                content = "[Imagem]"; // Texto indicativo que a mensagem contém apenas imagem
+            }
+
+            MessageDto messageDTO = new MessageDto(content);
+            Message message = messageService.sendMessageWithImage(ticketId, messageDTO, image);
+            notifyNewMessages(ticketId, message);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(message);
+        } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "error", "Bad Request",

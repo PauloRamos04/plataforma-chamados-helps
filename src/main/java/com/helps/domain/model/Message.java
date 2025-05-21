@@ -25,6 +25,17 @@ public class Message {
     @Column(name = "sent_date", nullable = false)
     private LocalDateTime sentDate;
 
+    @Column(name = "image_path")
+    private String imagePath;
+
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
+    }
+
     public Long getId() {
         return id;
     }
