@@ -23,6 +23,7 @@ COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 
 # Definir opções do Java
+ENV SPRING_PROFILES_ACTIVE=prod
 ENV JAVA_OPTS="-Xms512m -Xmx1024m"
 
 # Executar a aplicação

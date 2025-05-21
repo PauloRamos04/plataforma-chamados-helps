@@ -1,52 +1,64 @@
 version: '3.8'
 
 services:
-  # PostgreSQL database
   postgres:
     image: postgres:15-alpine
     container_name: helps-postgres
-    ports:
-      - "5432:5432"
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-helps}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helps_password}
-      POSTGRES_DB: ${POSTGRES_DB:-helps_db}
+      POSTGRES_DB: helps_db
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - helps-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helps}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-    restart: unless-stopped
-    networks:
-      - helps-network
 
-  # pgAdmin for database management (opcional, remover em produção real)
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: helps-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@helps.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-helps_admin}
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
+  app:
+    build: .
+    container_name: helps-app
     restart: unless-stopped
+    ports:
+      - "${PORT}:8080"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_DRIVER: ${DATABASE_DRIVER}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL}
+      HIBERNATE_DIALECT: ${HIBERNATE_DIALECT}
+      FLYWAY_ENABLED: ${FLYWAY_ENABLED}
+      HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE}
+      HIKARI_MIN_IDLE: ${HIKARI_MIN_IDLE}
+      HIKARI_IDLE_TIMEOUT: ${HIKARI_IDLE_TIMEOUT}
+      HIKARI_CONNECTION_TIMEOUT: ${HIKARI_CONNECTION_TIMEOUT}
+      PORT: ${PORT}
+      FILE_UPLOAD_DIR: ${FILE_UPLOAD_DIR}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      MAX_REQUEST_SIZE: ${MAX_REQUEST_SIZE}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      WEBSOCKET_ALLOWED_ORIGINS: ${WEBSOCKET_ALLOWED_ORIGINS}
+      LOG_LEVEL: ${LOG_LEVEL}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - helps-network
 
 volumes:
   postgres_data:
     name: helps_postgres_data
-  pgadmin_data:
-    name: helps_pgadmin_data
+  uploads_data:
+    name: helps_uploads_data
 
 networks:
   helps-network:
