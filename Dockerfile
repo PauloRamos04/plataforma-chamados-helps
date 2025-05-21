@@ -1,26 +1,18 @@
 # Estágio de build com Maven
-FROM eclipse-temurin:17-jdk AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar apenas o necessário para resolver dependências primeiro
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Copiar o projeto completo
+COPY . .
 
-# Configurar permissão de execução e baixar dependências
-RUN chmod +x ./mvnw && \
-    ./mvnw dependency:go-offline -B
-
-# Agora copiar o código-fonte e construir
-COPY src ./src
-RUN ./mvnw clean package -DskipTests
+# Desabilitar filtragem de recursos
+RUN mvn clean package -DskipTests -Dmaven.resources.skip=false -Dmaven.resources.filtering=false
 
 # Estágio de produção
 FROM eclipse-temurin:17-jre
 
-# Evitar usar Alpine que pode causar problemas com aplicações Java
 # Definir diretório de trabalho
 WORKDIR /app
 
