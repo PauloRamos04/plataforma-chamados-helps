@@ -19,11 +19,19 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Check maven wrapper
+        run: |
+          ls -la
+          echo "Verificando se o arquivo mvnw existe:"
+          find . -name "mvnw" -type f
+          echo "Tentando configurar permissões:"
+          chmod +x ./mvnw || true
+
       - name: Build with Maven
-        run: ./mvnw clean package -DskipTests
+        run: bash mvnw clean package -DskipTests
 
       - name: Run tests
-        run: ./mvnw test
+        run: bash mvnw test
 
   docker-build-and-push:
     needs: build-and-test
@@ -44,6 +52,8 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/helps-backend:latest
+          build-args: |
+            MAVEN_COMMAND=bash mvnw
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v4

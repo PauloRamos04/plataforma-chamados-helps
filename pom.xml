@@ -169,4 +169,17 @@
 		</plugins>
 	</build>
 
+	<distributionManagement>
+		<repository>
+			<id>local-repo</id>
+			<name>Local Repository</name>
+			<url>file:${project.build.directory}/deploy</url>
+		</repository>
+		<snapshotRepository>
+			<id>local-snapshot-repo</id>
+			<name>Local Snapshot Repository</name>
+			<url>file:${project.build.directory}/deploy-snapshot</url>
+		</snapshotRepository>
+	</distributionManagement>
+
 </project>

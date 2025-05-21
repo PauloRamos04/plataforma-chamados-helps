@@ -1,34 +1,37 @@
+# Estágio de build com Maven
 FROM eclipse-temurin:17-jdk AS build
 
-# Set working directory
+# Definir diretório de trabalho
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml
+# Copiar apenas o necessário para resolver dependências primeiro
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
+
+# Configurar permissão de execução e baixar dependências
+RUN chmod +x ./mvnw && \
+    ./mvnw dependency:go-offline -B
+
+# Agora copiar o código-fonte e construir
 COPY src ./src
-
-# Change execute permission for Maven wrapper
-RUN chmod +x ./mvnw
-
-# Build the application
 RUN ./mvnw clean package -DskipTests
 
-# Production stage
-FROM eclipse-temurin:17-jre-alpine
+# Estágio de produção
+FROM eclipse-temurin:17-jre
 
-# Set working directory
+# Evitar usar Alpine que pode causar problemas com aplicações Java
+# Definir diretório de trabalho
 WORKDIR /app
 
-# Copy the JAR file from the build stage
+# Copiar o arquivo JAR do estágio de build
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port
+# Expor porta
 EXPOSE 8080
 
-# Set Java options
+# Definir opções do Java
 ENV JAVA_OPTS="-Xms512m -Xmx1024m"
 
-# Run the application
+# Executar a aplicação
 ENTRYPOINT ["java", "-jar", "app.jar"]
