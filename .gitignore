@@ -38,5 +38,6 @@ application-prod.properties
 
 docker-compose.prod.yml
 /uploads/
-/.env
+/src/main/resources/.env
+/src/main/resources/.env.prod
 /nginx/
