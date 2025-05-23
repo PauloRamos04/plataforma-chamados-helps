@@ -62,52 +62,65 @@ public class NotificationService {
         List<User> usersToNotify = new ArrayList<>();
 
         try {
+            // Buscar apenas HELPERS e ADMINS ativos
             List<User> helpers = userRepository.findAll().stream()
-                    .filter(user -> user.isEnabled() &&
-                            (hasRole(user, "HELPER") || hasRole(user, "ROLE_HELPER")))
+                    .filter(user -> user.isEnabled() && hasHelperRole(user))
                     .collect(Collectors.toList());
             usersToNotify.addAll(helpers);
 
             List<User> admins = userRepository.findAll().stream()
-                    .filter(user -> user.isEnabled() &&
-                            (hasRole(user, "ADMIN") || hasRole(user, "ROLE_ADMIN")))
+                    .filter(user -> user.isEnabled() && hasAdminRole(user))
                     .collect(Collectors.toList());
             usersToNotify.addAll(admins);
 
+            // Remover duplicatas
             usersToNotify = usersToNotify.stream()
                     .distinct()
                     .collect(Collectors.toList());
 
+            // IMPORTANTE: Excluir o próprio criador do ticket
             if (ticketCreatorId != null) {
                 usersToNotify = usersToNotify.stream()
                         .filter(user -> !user.getId().equals(ticketCreatorId))
                         .collect(Collectors.toList());
             }
 
-            System.out.println("Total users to notify: " + usersToNotify.size());
+            System.out.println("Enviando notificações de novo ticket para " + usersToNotify.size() + " usuários (helpers/admins)");
 
             for (User user : usersToNotify) {
                 try {
+                    String creatorName = ticketCreator != null ?
+                            (ticketCreator.getName() != null ? ticketCreator.getName() : ticketCreator.getUsername()) :
+                            "Usuário";
+
                     createNotificationForUser(
                             user.getId(),
-                            "New ticket available: " + ticket.getTitle(),
+                            "Novo ticket criado por " + creatorName + ": " + ticket.getTitle(),
                             "NEW_TICKET",
                             ticket.getId()
                     );
-                    System.out.println("Notification sent to: " + user.getUsername());
+                    System.out.println("Notificação enviada para: " + user.getUsername() + " (Role: " +
+                            user.getRoles().stream().map(r -> r.getName()).collect(Collectors.joining(", ")) + ")");
                 } catch (Exception e) {
-                    System.err.println("Error sending notification to " + user.getUsername() + ": " + e.getMessage());
+                    System.err.println("Erro ao enviar notificação para " + user.getUsername() + ": " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error processing new ticket notifications: " + e.getMessage());
+            System.err.println("Erro ao processar notificações de novo ticket: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private boolean hasRole(User user, String roleName) {
+    private boolean hasAdminRole(User user) {
         return user.getRoles().stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+                .anyMatch(role -> role.getName().equalsIgnoreCase("ADMIN") ||
+                        role.getName().equalsIgnoreCase("ROLE_ADMIN"));
+    }
+
+    private boolean hasHelperRole(User user) {
+        return user.getRoles().stream()
+                .anyMatch(role -> role.getName().equalsIgnoreCase("HELPER") ||
+                        role.getName().equalsIgnoreCase("ROLE_HELPER"));
     }
 
     public void notifyMessageReceived(Long ticketId, Long senderId, String summarizedContent) {
@@ -117,21 +130,62 @@ public class NotificationService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        String senderName = sender.getName() != null ? sender.getName() : sender.getUsername();
+
+        // Notificar o usuário solicitante (se não for o remetente)
         if (ticket.getUser() != null && !ticket.getUser().getId().equals(senderId)) {
             createNotificationForUser(
                     ticket.getUser().getId(),
-                    "New message from " + sender.getName() + ": " + summarizedContent,
+                    "Nova mensagem de " + senderName + ": " + summarizedContent,
                     "NEW_MESSAGE",
                     ticketId
             );
         }
 
+        // Notificar o helper atribuído (se não for o remetente)
         if (ticket.getHelper() != null && !ticket.getHelper().getId().equals(senderId)) {
             createNotificationForUser(
                     ticket.getHelper().getId(),
-                    "New message from " + sender.getName() + ": " + summarizedContent,
+                    "Nova mensagem de " + senderName + ": " + summarizedContent,
                     "NEW_MESSAGE",
                     ticketId
+            );
+        }
+    }
+
+    public void notifyTicketAssigned(Ticket ticket, User helper) {
+        // Notificar apenas o solicitante do ticket
+        if (ticket.getUser() != null && !ticket.getUser().getId().equals(helper.getId())) {
+            String helperName = helper.getName() != null ? helper.getName() : helper.getUsername();
+            createNotificationForUser(
+                    ticket.getUser().getId(),
+                    "Seu ticket \"" + ticket.getTitle() + "\" começou a ser atendido por " + helperName,
+                    "TICKET_ASSIGNED",
+                    ticket.getId()
+            );
+        }
+    }
+
+    public void notifyTicketClosed(Ticket ticket, User closer) {
+        String closerName = closer.getName() != null ? closer.getName() : closer.getUsername();
+
+        // Notificar o solicitante (se não for quem fechou)
+        if (ticket.getUser() != null && !ticket.getUser().getId().equals(closer.getId())) {
+            createNotificationForUser(
+                    ticket.getUser().getId(),
+                    "Seu ticket \"" + ticket.getTitle() + "\" foi finalizado por " + closerName,
+                    "TICKET_CLOSED",
+                    ticket.getId()
+            );
+        }
+
+        // Notificar o helper (se não for quem fechou)
+        if (ticket.getHelper() != null && !ticket.getHelper().getId().equals(closer.getId())) {
+            createNotificationForUser(
+                    ticket.getHelper().getId(),
+                    "O ticket \"" + ticket.getTitle() + "\" foi finalizado por " + closerName,
+                    "TICKET_CLOSED",
+                    ticket.getId()
             );
         }
     }

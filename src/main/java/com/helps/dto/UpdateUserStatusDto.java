@@ -1,3 +1,8 @@
 package com.helps.dto;
 
-public record UpdateUserStatusDto(boolean enabled) {}
+import jakarta.validation.constraints.NotNull;
+
+public record UpdateUserStatusDto(
+        @NotNull(message = "Status é obrigatório")
+        Boolean enabled
+) {}

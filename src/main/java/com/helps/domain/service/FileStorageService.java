@@ -13,10 +13,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
+
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"
+    );
+
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     private final Path fileStorageLocation;
 
@@ -27,35 +34,24 @@ public class FileStorageService {
     }
 
     public String storeFile(MultipartFile file) throws IOException {
-        // Verificação de segurança para o nome do arquivo
+        validateFile(file);
+
         String originalFileName = StringUtils.cleanPath(file.getOriginalFilename());
         if (originalFileName.contains("..")) {
             throw new IOException("Nome de arquivo inválido: " + originalFileName);
         }
 
-        // Gerar nome único para o arquivo (UUID + extensão original)
-        String fileExtension = "";
-        int lastDotIndex = originalFileName.lastIndexOf('.');
-        if (lastDotIndex > 0) {
-            fileExtension = originalFileName.substring(lastDotIndex);
-        }
-
+        String fileExtension = getFileExtension(originalFileName);
         String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
         Path targetLocation = this.fileStorageLocation.resolve(uniqueFileName);
 
-        System.out.println("Salvando arquivo em: " + targetLocation);
-
-        // Copia o arquivo para o destino
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-        // MUITO IMPORTANTE: Retorna o caminho correto para ser armazenado no banco de dados
-        // Este caminho deve ser consistente com sua configuração de recursos estáticos
         return "/uploads/" + uniqueFileName;
     }
 
     public Resource loadFileAsResource(String fileName) throws MalformedURLException {
         try {
-            // Remove qualquer prefixo de caminho como "/uploads/" se presente
             if (fileName.startsWith("/uploads/")) {
                 fileName = fileName.substring("/uploads/".length());
             }
@@ -71,5 +67,34 @@ public class FileStorageService {
         } catch (MalformedURLException ex) {
             throw new MalformedURLException("Arquivo não encontrado: " + fileName);
         }
+    }
+
+    public void deleteFile(String fileName) throws IOException {
+        if (fileName.startsWith("/uploads/")) {
+            fileName = fileName.substring("/uploads/".length());
+        }
+
+        Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+        Files.deleteIfExists(filePath);
+    }
+
+    private void validateFile(MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new IOException("Arquivo está vazio");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IOException("Arquivo muito grande. Tamanho máximo: 5MB");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType)) {
+            throw new IOException("Tipo de arquivo não permitido: " + contentType);
+        }
+    }
+
+    private String getFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        return lastDotIndex > 0 ? fileName.substring(lastDotIndex) : "";
     }
 }

@@ -1,6 +1,20 @@
 package com.helps.dto;
 
-public record CreateUserDto(String username, String password, String name) {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CreateUserDto(
+        @NotBlank(message = "Nome de usuário é obrigatório")
+        @Size(min = 3, max = 50, message = "Nome de usuário deve ter entre 3 e 50 caracteres")
+        String username,
+
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 6, message = "Senha deve ter pelo menos 6 caracteres")
+        String password,
+
+        @Size(max = 100, message = "Nome deve ter no máximo 100 caracteres")
+        String name
+) {
     public CreateUserDto(String username, String password) {
         this(username, password, null);
     }
