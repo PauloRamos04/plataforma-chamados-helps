@@ -56,10 +56,8 @@ public class ActivityLogService {
 
     @Transactional
     public String createUserSession(User user, HttpServletRequest request) {
-        System.out.println("=== CRIANDO NOVA SESSÃO ===");
         System.out.println("Usuário: " + user.getUsername());
 
-        // PRIMEIRO: Finalizar todas as sessões ativas do usuário
         List<UserSession> activeSessions = sessionRepository.findByUserAndIsActiveTrueOrderByLoginTimeDesc(user);
         System.out.println("Sessões ativas encontradas para finalizar: " + activeSessions.size());
 
@@ -72,7 +70,6 @@ public class ActivityLogService {
             System.out.println("Sessão finalizada: " + activeSession.getSessionId());
         }
 
-        // SEGUNDO: Criar nova sessão
         String sessionId = UUID.randomUUID().toString();
         System.out.println("Novo sessionId gerado: " + sessionId);
 
@@ -92,13 +89,11 @@ public class ActivityLogService {
 
         logActivity(user, "LOGIN", request, "Usuário fez login no sistema");
 
-        System.out.println("=== SESSÃO CRIADA COM SUCESSO ===");
         return sessionId;
     }
 
     @Transactional
     public void endUserSession(String sessionId) {
-        System.out.println("=== FINALIZANDO SESSÃO ===");
         System.out.println("SessionId: " + sessionId);
 
         if (sessionId == null || sessionId.isEmpty()) {
@@ -120,7 +115,6 @@ public class ActivityLogService {
         } else {
             System.err.println("Sessão não encontrada ou já inativa: " + sessionId);
 
-            // Tenta finalizar todas as sessões ativas do usuário atual como fallback
             try {
                 User currentUser = userContextService.getCurrentUser();
                 List<UserSession> activeSessions = sessionRepository.findByUserAndIsActiveTrueOrderByLoginTimeDesc(currentUser);
@@ -140,8 +134,6 @@ public class ActivityLogService {
                 System.err.println("Erro no fallback de finalização de sessão: " + e.getMessage());
             }
         }
-
-        System.out.println("=== FINALIZAÇÃO DE SESSÃO CONCLUÍDA ===");
     }
 
     @Transactional
@@ -153,11 +145,11 @@ public class ActivityLogService {
                 });
     }
 
-    @Scheduled(fixedRate = 300000) // Executa a cada 5 minutos
+    @Scheduled(fixedRate = 300000)
     @Transactional
     public void cleanupInactiveSessions() {
         try {
-            LocalDateTime timeout = LocalDateTime.now().minusHours(2); // 2 horas de inatividade
+            LocalDateTime timeout = LocalDateTime.now().minusHours(2);
 
             List<UserSession> inactiveSessions = sessionRepository.findActiveSessions()
                     .stream()
@@ -281,11 +273,19 @@ public class ActivityLogService {
     }
 
     private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedForHeader = request.getHeader("X-Forwarded-For");
-        if (xForwardedForHeader == null) {
-            return request.getRemoteAddr();
-        } else {
-            return xForwardedForHeader.split(",")[0];
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
         }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 }
