@@ -40,6 +40,9 @@ public class TicketService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private ActivityLogService activityLogService;
+
     public Page<TicketResponseDto> findAllWithPagination(Pageable pageable, TicketFilterDto filters) {
         User currentUser = userContextService.getCurrentUser();
         Specification<Ticket> spec = createSpecification(currentUser, filters);
@@ -83,6 +86,10 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
+        // Registrar log de atividade
+        activityLogService.logActivity(currentUser, "TICKET_CREATED", null,
+                "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
+
         try {
             notificationService.notifyNewTickets(savedTicket);
         } catch (Exception e) {
@@ -106,6 +113,10 @@ public class TicketService {
 
         Ticket updatedTicket = ticketRepository.save(ticket);
 
+        // Registrar log de atividade
+        activityLogService.logActivity(helper, "TICKET_ASSIGNED", null,
+                "Assumiu chamado #" + ticket.getId() + ": " + ticket.getTitle());
+
         // Notificar via WebSocket
         webSocketService.notifyTicketStatus(updatedTicket,
                 helper.getName() + " começou a atender este ticket");
@@ -128,6 +139,10 @@ public class TicketService {
         ticket.setClosingDate(LocalDateTime.now());
 
         Ticket closedTicket = ticketRepository.save(ticket);
+
+        // Registrar log de atividade
+        activityLogService.logActivity(currentUser, "TICKET_CLOSED", null,
+                "Finalizou chamado #" + ticket.getId() + ": " + ticket.getTitle());
 
         // Notificar via WebSocket
         webSocketService.notifyTicketStatus(closedTicket,
@@ -158,6 +173,10 @@ public class TicketService {
         ticket.setUser(solicitante);
 
         Ticket savedTicket = ticketRepository.save(ticket);
+
+        // Registrar log de atividade
+        activityLogService.logActivity(solicitante, "TICKET_CREATED", null,
+                "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
 
         try {
             notificationService.notifyNewTickets(savedTicket);
@@ -192,6 +211,10 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
+        // Registrar log de atividade
+        activityLogService.logActivity(solicitante, "TICKET_CREATED", null,
+                "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
+
         try {
             notificationService.notifyNewTickets(savedTicket);
         } catch (Exception e) {
@@ -210,6 +233,7 @@ public class TicketService {
                                 "You don't have permission to update this ticket");
                     }
 
+                    String originalTitle = ticket.getTitle();
                     ticket.setTitle(updatedTicket.getTitle());
                     ticket.setDescription(updatedTicket.getDescription());
 
@@ -218,12 +242,22 @@ public class TicketService {
                         ticket.setStatus(updatedTicket.getStatus());
 
                         if (!previousStatus.equals(updatedTicket.getStatus())) {
+                            // Registrar log de mudança de status
+                            activityLogService.logActivity(userContextService.getCurrentUser(), "TICKET_STATUS_CHANGED", null,
+                                    "Alterou status do chamado #" + ticket.getId() + " de " + previousStatus + " para " + ticket.getStatus());
+
                             webSocketService.notifyTicketStatus(ticket,
                                     "Status changed from " + previousStatus + " to " + ticket.getStatus());
                         }
                     }
 
-                    return ticketRepository.save(ticket);
+                    Ticket savedTicket = ticketRepository.save(ticket);
+
+                    // Registrar log de atualização
+                    activityLogService.logActivity(userContextService.getCurrentUser(), "TICKET_UPDATED", null,
+                            "Atualizou chamado #" + ticket.getId() + ": " + originalTitle);
+
+                    return savedTicket;
                 })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
     }

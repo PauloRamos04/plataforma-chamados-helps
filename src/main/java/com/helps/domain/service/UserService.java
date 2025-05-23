@@ -31,6 +31,12 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private UserContextService userContextService;
+
+    @Autowired
+    private ActivityLogService activityLogService;
+
     @Transactional
     public UserResponseDto createUser(CreateUserDto dto, String roleName) {
         if (userRepository.findByUsername(dto.username()).isPresent()) {
@@ -49,6 +55,16 @@ public class UserService {
         user.setRoles(Collections.singleton(role));
 
         User savedUser = userRepository.save(user);
+
+        // Registrar log de atividade
+        try {
+            User currentUser = userContextService.getCurrentUser();
+            activityLogService.logActivity(currentUser, "USER_CREATED", null,
+                    "Criou usuário: " + dto.username() + " com perfil " + roleName);
+        } catch (Exception e) {
+            // Se não conseguir obter o usuário atual (ex: primeiro usuário sendo criado), registra como sistema
+            System.out.println("Usuário criado: " + dto.username() + " (registro de log falhou: " + e.getMessage() + ")");
+        }
 
         return convertToDto(savedUser);
     }
@@ -69,7 +85,17 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
+        String deletedUsername = user.getUsername();
         userRepository.delete(user);
+
+        // Registrar log de atividade
+        try {
+            User currentUser = userContextService.getCurrentUser();
+            activityLogService.logActivity(currentUser, "USER_DELETED", null,
+                    "Excluiu usuário: " + deletedUsername);
+        } catch (Exception e) {
+            System.err.println("Erro ao registrar log de exclusão de usuário: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -77,8 +103,22 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
+        boolean wasEnabled = user.isEnabled();
         user.setEnabled(enabled);
-        return convertToDto(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+
+        // Registrar log de atividade
+        try {
+            User currentUser = userContextService.getCurrentUser();
+            String action = enabled ? "USER_ENABLED" : "USER_DISABLED";
+            String description = (enabled ? "Ativou" : "Desativou") + " usuário: " + user.getUsername();
+
+            activityLogService.logActivity(currentUser, action, null, description);
+        } catch (Exception e) {
+            System.err.println("Erro ao registrar log de alteração de status: " + e.getMessage());
+        }
+
+        return convertToDto(savedUser);
     }
 
     @Transactional
@@ -86,8 +126,14 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
+        StringBuilder changes = new StringBuilder();
+
         if (dto.name() != null && !dto.name().trim().isEmpty()) {
+            String oldName = user.getName();
             user.setName(dto.name());
+            if (!dto.name().equals(oldName)) {
+                changes.append("Nome: '").append(oldName).append("' → '").append(dto.name()).append("'; ");
+            }
         }
 
         if (dto.role() != null && !dto.role().trim().isEmpty()) {
@@ -95,6 +141,10 @@ public class UserService {
                     .anyMatch(role -> role.getName().equals(dto.role()) || role.getName().equals("ROLE_" + dto.role()));
 
             if (!roleExists) {
+                String oldRoles = user.getRoles().stream()
+                        .map(Role::getName)
+                        .collect(Collectors.joining(", "));
+
                 user.getRoles().clear();
 
                 Role role = roleRepository.findByName(dto.role())
@@ -105,14 +155,30 @@ public class UserService {
                         });
 
                 user.getRoles().add(role);
+                changes.append("Perfil: '").append(oldRoles).append("' → '").append(dto.role()).append("'; ");
             }
         }
 
         if (dto.password() != null && !dto.password().trim().isEmpty()) {
             user.setPassword(passwordEncoder.encode(dto.password()));
+            changes.append("Senha alterada; ");
         }
 
         User savedUser = userRepository.save(user);
+
+        // Registrar log de atividade
+        try {
+            User currentUser = userContextService.getCurrentUser();
+            String description = "Atualizou usuário: " + user.getUsername();
+            if (changes.length() > 0) {
+                description += " - Alterações: " + changes.toString().trim();
+            }
+
+            activityLogService.logActivity(currentUser, "USER_UPDATED", null, description);
+        } catch (Exception e) {
+            System.err.println("Erro ao registrar log de atualização de usuário: " + e.getMessage());
+        }
+
         return convertToDto(savedUser);
     }
 

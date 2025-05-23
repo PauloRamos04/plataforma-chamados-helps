@@ -51,31 +51,48 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
-
                         .requestMatchers("/api/files/download/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
+                        // Admin endpoints
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/users/{id}").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/admin/users").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/users/{id}").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/admin/users/{id}").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/admin/users/{id}/status").hasAuthority("ADMIN")
 
+                        // User registration endpoints
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
-                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
+                        // Ticket endpoints - CORRIGIDO
+                        .requestMatchers(HttpMethod.GET, "/tickets").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/tickets/{id}").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/tickets").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/tickets/with-image").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/tickets/{id}").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/chamados/{id}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/chamados/{id}/mensagens").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/chamados/{id}/mensagens").authenticated()
+                        // Ticket actions - HELPER/ADMIN only
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
+
+                        // Messages endpoints
+                        .requestMatchers(HttpMethod.GET, "/tickets/{id}/mensagens").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/mensagens").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/mensagens/with-image").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/tickets/{id}/mensagens/chat-history").authenticated()
+
+                        // Notifications endpoints
+                        .requestMatchers(HttpMethod.GET, "/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/notifications/test").authenticated()
 
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions().sameOrigin())
@@ -91,7 +108,8 @@ public class SecurityConfig {
     public WebSecurityCustomizer webSecurityCustomizer() {
         return (web) -> web.ignoring()
                 .requestMatchers("/ws/**")
-                .requestMatchers("/api/files/download/**");
+                .requestMatchers("/api/files/download/**")
+                .requestMatchers("/uploads/**");
     }
 
     @Bean
