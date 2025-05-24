@@ -30,6 +30,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -40,6 +41,9 @@ public class SecurityConfig {
 
     @Value("${jwt.private.key}")
     private RSAPrivateKey privateKey;
+
+    @Value("${cors.allowed-origins}")
+    private String corsAllowedOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,55 +57,34 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/files/download/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
 
-                        // Admin endpoints
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/admin/users").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/admin/users/{id}").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/admin/users").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/admin/users/{id}").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/admin/users/{id}").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/admin/users/{id}/status").hasAuthority("ADMIN")
-
-                        // User registration endpoints
                         .requestMatchers(HttpMethod.POST, "/users").permitAll()
                         .requestMatchers(HttpMethod.POST, "/register/helper").hasAuthority("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/register/admin").hasAuthority("ADMIN")
 
-                        // Ticket endpoints - CORRIGIDO
                         .requestMatchers(HttpMethod.GET, "/tickets").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/tickets/{id}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/tickets").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/tickets/with-image").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/tickets/{id}").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/tickets/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/tickets/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/tickets/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/tickets/**").authenticated()
 
-                        // Ticket actions - HELPER/ADMIN only
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/assign").hasAnyAuthority("HELPER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/close").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/tickets/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/aderir").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/tickets/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/fechar").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/tickets/{id}/finalizar").hasAnyAuthority("HELPER", "ADMIN")
 
-                        // Messages endpoints
-                        .requestMatchers(HttpMethod.GET, "/tickets/{id}/mensagens").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/mensagens").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/tickets/{id}/mensagens/with-image").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/tickets/{id}/mensagens/chat-history").authenticated()
-
-                        // Notifications endpoints
-                        .requestMatchers(HttpMethod.GET, "/notifications/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/notifications/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/notifications/test").authenticated()
-
-                        .requestMatchers(HttpMethod.GET, "/metrics/**").authenticated()
+                        .requestMatchers("/notifications/**").authenticated()
+                        .requestMatchers("/metrics/**").authenticated()
 
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions().sameOrigin())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .httpBasic(Customizer.withDefaults());
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
@@ -111,7 +94,8 @@ public class SecurityConfig {
         return (web) -> web.ignoring()
                 .requestMatchers("/ws/**")
                 .requestMatchers("/api/files/download/**")
-                .requestMatchers("/uploads/**");
+                .requestMatchers("/uploads/**")
+                .requestMatchers("/actuator/health");
     }
 
     @Bean
@@ -122,18 +106,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "https://helps-plataforms-frontend.vercel.app"
-        ));
+
+        List<String> allowedOrigins = Arrays.asList(corsAllowedOrigins.split(","));
+        configuration.setAllowedOriginPatterns(allowedOrigins);
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList(
-                "authorization",
-                "content-type",
-                "x-auth-token",
-                "access-control-allow-origin"
-        ));
-        configuration.setExposedHeaders(Arrays.asList("x-auth-token", "authorization"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "x-auth-token"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
