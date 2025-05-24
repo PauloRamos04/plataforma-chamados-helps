@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +29,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class ActivityLogService {
+
+    private static final ZoneId BRAZIL_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final DateTimeFormatter READABLE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     @Autowired
     private UserActivityLogRepository activityLogRepository;
@@ -42,8 +47,8 @@ public class ActivityLogService {
         UserActivityLog log = new UserActivityLog();
         log.setUser(user);
         log.setActivity(activity);
-        log.setCreatedAt(LocalDateTime.now());
-        log.setAdditionalInfo(additionalInfo);
+        log.setCreatedAt(getCurrentBrazilTime());
+        log.setAdditionalInfo(formatActivityMessage(activity, user, additionalInfo));
 
         if (request != null) {
             log.setIpAddress(getClientIpAddress(request));
@@ -56,28 +61,26 @@ public class ActivityLogService {
 
     @Transactional
     public String createUserSession(User user, HttpServletRequest request) {
-        System.out.println("Usuário: " + user.getUsername());
+        LocalDateTime currentTime = getCurrentBrazilTime();
 
         List<UserSession> activeSessions = sessionRepository.findByUserAndIsActiveTrueOrderByLoginTimeDesc(user);
-        System.out.println("Sessões ativas encontradas para finalizar: " + activeSessions.size());
 
         for (UserSession activeSession : activeSessions) {
-            activeSession.setLogoutTime(LocalDateTime.now());
+            activeSession.setLogoutTime(currentTime);
             activeSession.setIsActive(false);
             sessionRepository.save(activeSession);
 
-            logActivity(user, "SESSION_REPLACED", request, "Sessão anterior finalizada por novo login");
-            System.out.println("Sessão finalizada: " + activeSession.getSessionId());
+            logActivity(user, "SESSION_REPLACED", request,
+                    "Sessão anterior finalizada automaticamente por novo login");
         }
 
         String sessionId = UUID.randomUUID().toString();
-        System.out.println("Novo sessionId gerado: " + sessionId);
 
         UserSession session = new UserSession();
         session.setUser(user);
         session.setSessionId(sessionId);
-        session.setLoginTime(LocalDateTime.now());
-        session.setLastActivity(LocalDateTime.now());
+        session.setLoginTime(currentTime);
+        session.setLastActivity(currentTime);
         session.setIsActive(true);
 
         if (request != null) {
@@ -86,18 +89,16 @@ public class ActivityLogService {
         }
 
         sessionRepository.save(session);
-
-        logActivity(user, "LOGIN", request, "Usuário fez login no sistema");
+        logActivity(user, "LOGIN", request, "Login realizado com sucesso");
 
         return sessionId;
     }
 
     @Transactional
     public void endUserSession(String sessionId) {
-        System.out.println("SessionId: " + sessionId);
+        LocalDateTime currentTime = getCurrentBrazilTime();
 
         if (sessionId == null || sessionId.isEmpty()) {
-            System.err.println("SessionId vazio ou nulo para finalizar sessão");
             return;
         }
 
@@ -105,31 +106,28 @@ public class ActivityLogService {
 
         if (sessionOpt.isPresent()) {
             UserSession session = sessionOpt.get();
-            session.setLogoutTime(LocalDateTime.now());
+            session.setLogoutTime(currentTime);
             session.setIsActive(false);
             sessionRepository.save(session);
 
-            logActivity(session.getUser(), "LOGOUT", null, "Usuário fez logout do sistema");
+            Duration sessionDuration = Duration.between(session.getLoginTime(), currentTime);
+            String durationText = formatDuration(sessionDuration);
 
-            System.out.println("Sessão finalizada com sucesso: " + sessionId + " para usuário: " + session.getUser().getUsername());
+            logActivity(session.getUser(), "LOGOUT", null,
+                    "Logout realizado - Tempo de sessão: " + durationText);
         } else {
-            System.err.println("Sessão não encontrada ou já inativa: " + sessionId);
-
             try {
                 User currentUser = userContextService.getCurrentUser();
                 List<UserSession> activeSessions = sessionRepository.findByUserAndIsActiveTrueOrderByLoginTimeDesc(currentUser);
 
-                System.out.println("Fallback: encontradas " + activeSessions.size() + " sessões ativas para finalizar");
-
                 for (UserSession activeSession : activeSessions) {
-                    activeSession.setLogoutTime(LocalDateTime.now());
+                    activeSession.setLogoutTime(currentTime);
                     activeSession.setIsActive(false);
                     sessionRepository.save(activeSession);
 
-                    logActivity(currentUser, "LOGOUT", null, "Logout realizado (sessão encontrada por usuário)");
+                    logActivity(currentUser, "LOGOUT", null,
+                            "Logout realizado (sessão encontrada por usuário)");
                 }
-
-                System.out.println("Finalizadas " + activeSessions.size() + " sessões ativas como fallback");
             } catch (Exception e) {
                 System.err.println("Erro no fallback de finalização de sessão: " + e.getMessage());
             }
@@ -140,7 +138,7 @@ public class ActivityLogService {
     public void updateLastActivity(String sessionId) {
         sessionRepository.findBySessionIdAndIsActiveTrue(sessionId)
                 .ifPresent(session -> {
-                    session.setLastActivity(LocalDateTime.now());
+                    session.setLastActivity(getCurrentBrazilTime());
                     sessionRepository.save(session);
                 });
     }
@@ -149,7 +147,7 @@ public class ActivityLogService {
     @Transactional
     public void cleanupInactiveSessions() {
         try {
-            LocalDateTime timeout = LocalDateTime.now().minusHours(2);
+            LocalDateTime timeout = getCurrentBrazilTime().minusHours(2);
 
             List<UserSession> inactiveSessions = sessionRepository.findActiveSessions()
                     .stream()
@@ -157,12 +155,15 @@ public class ActivityLogService {
                     .collect(Collectors.toList());
 
             for (UserSession session : inactiveSessions) {
-                session.setLogoutTime(LocalDateTime.now());
+                session.setLogoutTime(getCurrentBrazilTime());
                 session.setIsActive(false);
                 sessionRepository.save(session);
 
+                Duration sessionDuration = Duration.between(session.getLoginTime(), session.getLogoutTime());
+                String durationText = formatDuration(sessionDuration);
+
                 logActivity(session.getUser(), "SESSION_TIMEOUT", null,
-                        "Sessão expirada por inatividade");
+                        "Sessão expirada por inatividade - Duração: " + durationText);
             }
 
             if (!inactiveSessions.isEmpty()) {
@@ -201,7 +202,7 @@ public class ActivityLogService {
     }
 
     public ActivityStatsDto getActivityStats() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = getCurrentBrazilTime();
         LocalDateTime oneDayAgo = now.minusDays(1);
 
         Long totalSessions = sessionRepository.count();
@@ -219,7 +220,7 @@ public class ActivityLogService {
         List<UserActivityLog> activities24h = activityLogRepository.findByDateRange(oneDayAgo, now, Pageable.unpaged()).getContent();
         Map<String, Long> activitiesByType = activities24h.stream()
                 .collect(Collectors.groupingBy(
-                        UserActivityLog::getActivity,
+                        log -> getReadableActivityName(log.getActivity()),
                         Collectors.counting()
                 ));
 
@@ -227,7 +228,7 @@ public class ActivityLogService {
                 totalSessions,
                 activeSessions,
                 totalLogins24h,
-                0L,
+                (long) logins24h.stream().map(log -> log.getUser().getId()).collect(Collectors.toSet()).size(),
                 activeSessions,
                 loginsByHour,
                 activitiesByType
@@ -240,7 +241,7 @@ public class ActivityLogService {
                 log.getUser().getId(),
                 log.getUser().getUsername(),
                 log.getUser().getName() != null ? log.getUser().getName() : log.getUser().getUsername(),
-                log.getActivity(),
+                getReadableActivityName(log.getActivity()),
                 log.getIpAddress(),
                 log.getUserAgent(),
                 log.getSessionId(),
@@ -252,7 +253,7 @@ public class ActivityLogService {
     private UserSessionDto convertToUserSessionDto(UserSession session) {
         Long durationMinutes = null;
         if (session.getLoginTime() != null) {
-            LocalDateTime endTime = session.getLogoutTime() != null ? session.getLogoutTime() : LocalDateTime.now();
+            LocalDateTime endTime = session.getLogoutTime() != null ? session.getLogoutTime() : getCurrentBrazilTime();
             durationMinutes = Duration.between(session.getLoginTime(), endTime).toMinutes();
         }
 
@@ -272,6 +273,97 @@ public class ActivityLogService {
         );
     }
 
+    private LocalDateTime getCurrentBrazilTime() {
+        return LocalDateTime.now(BRAZIL_ZONE);
+    }
+
+    private String formatActivityMessage(String activity, User user, String additionalInfo) {
+        String userName = user.getName() != null ? user.getName() : user.getUsername();
+
+        switch (activity) {
+            case "LOGIN":
+                return "Usuário " + userName + " fez login no sistema";
+            case "LOGOUT":
+                return "Usuário " + userName + " fez logout do sistema";
+            case "LOGIN_FAILED":
+                return "Tentativa de login falhou para " + userName;
+            case "SESSION_TIMEOUT":
+                return "Sessão de " + userName + " expirou por inatividade";
+            case "SESSION_REPLACED":
+                return "Sessão anterior de " + userName + " foi substituída por novo login";
+            case "TICKET_CREATED":
+                return additionalInfo != null ? additionalInfo : "Criou um novo chamado";
+            case "TICKET_ASSIGNED":
+                return additionalInfo != null ? additionalInfo : "Assumiu um chamado";
+            case "TICKET_CLOSED":
+                return additionalInfo != null ? additionalInfo : "Finalizou um chamado";
+            case "TICKET_UPDATED":
+                return additionalInfo != null ? additionalInfo : "Atualizou um chamado";
+            case "TICKET_STATUS_CHANGED":
+                return additionalInfo != null ? additionalInfo : "Alterou status de um chamado";
+            case "USER_CREATED":
+                return additionalInfo != null ? additionalInfo : "Criou um novo usuário";
+            case "USER_UPDATED":
+                return additionalInfo != null ? additionalInfo : "Atualizou um usuário";
+            case "USER_DELETED":
+                return additionalInfo != null ? additionalInfo : "Excluiu um usuário";
+            case "USER_ENABLED":
+                return additionalInfo != null ? additionalInfo : "Ativou um usuário";
+            case "USER_DISABLED":
+                return additionalInfo != null ? additionalInfo : "Desativou um usuário";
+            default:
+                return additionalInfo != null ? additionalInfo : "Ação realizada: " + activity;
+        }
+    }
+
+    private String getReadableActivityName(String activity) {
+        switch (activity) {
+            case "LOGIN":
+                return "Login";
+            case "LOGOUT":
+                return "Logout";
+            case "LOGIN_FAILED":
+                return "Login Falhou";
+            case "SESSION_TIMEOUT":
+                return "Sessão Expirada";
+            case "SESSION_REPLACED":
+                return "Sessão Substituída";
+            case "TICKET_CREATED":
+                return "Chamado Criado";
+            case "TICKET_ASSIGNED":
+                return "Chamado Atribuído";
+            case "TICKET_CLOSED":
+                return "Chamado Finalizado";
+            case "TICKET_UPDATED":
+                return "Chamado Atualizado";
+            case "TICKET_STATUS_CHANGED":
+                return "Status Alterado";
+            case "USER_CREATED":
+                return "Usuário Criado";
+            case "USER_UPDATED":
+                return "Usuário Atualizado";
+            case "USER_DELETED":
+                return "Usuário Excluído";
+            case "USER_ENABLED":
+                return "Usuário Ativado";
+            case "USER_DISABLED":
+                return "Usuário Desativado";
+            default:
+                return activity;
+        }
+    }
+
+    private String formatDuration(Duration duration) {
+        long hours = duration.toHours();
+        long minutes = duration.toMinutesPart();
+
+        if (hours > 0) {
+            return String.format("%dh %02dm", hours, minutes);
+        } else {
+            return String.format("%dm", minutes);
+        }
+    }
+
     private String getClientIpAddress(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
@@ -279,6 +371,12 @@ public class ActivityLogService {
         }
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
         }
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
