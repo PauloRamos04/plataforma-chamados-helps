@@ -94,6 +94,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/notifications/test").authenticated()
 
+                        .requestMatchers(HttpMethod.GET, "/metrics/**").authenticated()
+
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions().sameOrigin())
                 .oauth2ResourceServer(oauth2 -> oauth2

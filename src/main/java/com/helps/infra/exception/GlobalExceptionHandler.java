@@ -27,10 +27,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ApiResponse<Object>> handleBadCredentialsException(BadCredentialsException ex) {
+    public ResponseEntity<Map<String, String>> handleBadCredentialsException(BadCredentialsException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", "Usuário ou senha inválidos");
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error("Credenciais inválidas"));
+                .body(errorResponse);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -52,7 +54,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Dados inválidos"));
+                .body(ApiResponse.error("Dados inválidos", errors));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
