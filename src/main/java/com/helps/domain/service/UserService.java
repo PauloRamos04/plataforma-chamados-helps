@@ -2,8 +2,15 @@ package com.helps.domain.service;
 
 import com.helps.domain.model.Role;
 import com.helps.domain.model.User;
+import com.helps.domain.model.Ticket;
+import com.helps.domain.model.Message;
 import com.helps.domain.repository.RoleRepository;
 import com.helps.domain.repository.UserRepository;
+import com.helps.domain.repository.TicketRepository;
+import com.helps.domain.repository.MessageRepository;
+import com.helps.domain.repository.UserActivityLogRepository;
+import com.helps.domain.repository.UserSessionRepository;
+import com.helps.domain.repository.NotificationRepository;
 import com.helps.dto.CreateUserDto;
 import com.helps.dto.UpdateUserDto;
 import com.helps.dto.UserResponseDto;
@@ -27,6 +34,21 @@ public class UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private TicketRepository ticketRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
+
+    @Autowired
+    private UserActivityLogRepository activityLogRepository;
+
+    @Autowired
+    private UserSessionRepository sessionRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -56,13 +78,11 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        // Registrar log de atividade
         try {
             User currentUser = userContextService.getCurrentUser();
             activityLogService.logActivity(currentUser, "USER_CREATED", null,
                     "Criou usuário: " + dto.username() + " com perfil " + roleName);
         } catch (Exception e) {
-            // Se não conseguir obter o usuário atual (ex: primeiro usuário sendo criado), registra como sistema
             System.out.println("Usuário criado: " + dto.username() + " (registro de log falhou: " + e.getMessage() + ")");
         }
 
@@ -86,9 +106,16 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
         String deletedUsername = user.getUsername();
-        userRepository.delete(user);
 
-        // Registrar log de atividade
+        try {
+            cleanupUserReferences(user);
+            userRepository.delete(user);
+        } catch (Exception e) {
+            System.err.println("Erro ao excluir usuário: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Não foi possível excluir o usuário. Verifique se não há dependências ativas.");
+        }
+
         try {
             User currentUser = userContextService.getCurrentUser();
             activityLogService.logActivity(currentUser, "USER_DELETED", null,
@@ -96,6 +123,25 @@ public class UserService {
         } catch (Exception e) {
             System.err.println("Erro ao registrar log de exclusão de usuário: " + e.getMessage());
         }
+    }
+
+    @Transactional
+    private void cleanupUserReferences(User user) {
+        List<Ticket> userTickets = ticketRepository.findByUser(user);
+        for (Ticket ticket : userTickets) {
+            ticket.setUser(null);
+        }
+        ticketRepository.saveAll(userTickets);
+
+        List<Ticket> helperTickets = ticketRepository.findByHelper(user);
+        for (Ticket ticket : helperTickets) {
+            ticket.setHelper(null);
+        }
+        ticketRepository.saveAll(helperTickets);
+
+        activityLogRepository.deleteAll(user.getActivityLogs());
+        sessionRepository.deleteAll(user.getSessions());
+        notificationRepository.deleteAll(user.getNotifications());
     }
 
     @Transactional
@@ -107,7 +153,6 @@ public class UserService {
         user.setEnabled(enabled);
         User savedUser = userRepository.save(user);
 
-        // Registrar log de atividade
         try {
             User currentUser = userContextService.getCurrentUser();
             String action = enabled ? "USER_ENABLED" : "USER_DISABLED";
@@ -166,7 +211,6 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        // Registrar log de atividade
         try {
             User currentUser = userContextService.getCurrentUser();
             String description = "Atualizou usuário: " + user.getUsername();

@@ -27,13 +27,44 @@ public class User {
     @Column(nullable = false)
     private Boolean enabled = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserActivityLog> activityLogs = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserSession> sessions = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Notification> notifications = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST)
+    private Set<Ticket> createdTickets = new HashSet<>();
+
+    @OneToMany(mappedBy = "helper", cascade = CascadeType.PERSIST)
+    private Set<Ticket> helperTickets = new HashSet<>();
+
+    @OneToMany(mappedBy = "sender", cascade = CascadeType.PERSIST)
+    private Set<Message> sentMessages = new HashSet<>();
+
+    @PreRemove
+    private void preRemove() {
+        for (Ticket ticket : createdTickets) {
+            ticket.setUser(null);
+        }
+        for (Ticket ticket : helperTickets) {
+            ticket.setHelper(null);
+        }
+        for (Message message : sentMessages) {
+            message.setSender(null);
+        }
+    }
 
     public Long getId() {
         return id;
@@ -81,6 +112,54 @@ public class User {
 
     public void setRoles(Set<Role> roles) {
         this.roles = roles;
+    }
+
+    public Set<UserActivityLog> getActivityLogs() {
+        return activityLogs;
+    }
+
+    public void setActivityLogs(Set<UserActivityLog> activityLogs) {
+        this.activityLogs = activityLogs;
+    }
+
+    public Set<UserSession> getSessions() {
+        return sessions;
+    }
+
+    public void setSessions(Set<UserSession> sessions) {
+        this.sessions = sessions;
+    }
+
+    public Set<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(Set<Notification> notifications) {
+        this.notifications = notifications;
+    }
+
+    public Set<Ticket> getCreatedTickets() {
+        return createdTickets;
+    }
+
+    public void setCreatedTickets(Set<Ticket> createdTickets) {
+        this.createdTickets = createdTickets;
+    }
+
+    public Set<Ticket> getHelperTickets() {
+        return helperTickets;
+    }
+
+    public void setHelperTickets(Set<Ticket> helperTickets) {
+        this.helperTickets = helperTickets;
+    }
+
+    public Set<Message> getSentMessages() {
+        return sentMessages;
+    }
+
+    public void setSentMessages(Set<Message> sentMessages) {
+        this.sentMessages = sentMessages;
     }
 
     public boolean isLoginCorrect(LoginRequest loginRequest, BCryptPasswordEncoder encoder) {

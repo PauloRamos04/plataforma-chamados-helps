@@ -62,7 +62,6 @@ public class NotificationService {
         List<User> usersToNotify = new ArrayList<>();
 
         try {
-            // Buscar apenas HELPERS e ADMINS ativos
             List<User> helpers = userRepository.findAll().stream()
                     .filter(user -> user.isEnabled() && hasHelperRole(user))
                     .collect(Collectors.toList());
@@ -73,19 +72,15 @@ public class NotificationService {
                     .collect(Collectors.toList());
             usersToNotify.addAll(admins);
 
-            // Remover duplicatas
             usersToNotify = usersToNotify.stream()
                     .distinct()
                     .collect(Collectors.toList());
 
-            // IMPORTANTE: Excluir o próprio criador do ticket
             if (ticketCreatorId != null) {
                 usersToNotify = usersToNotify.stream()
                         .filter(user -> !user.getId().equals(ticketCreatorId))
                         .collect(Collectors.toList());
             }
-
-            System.out.println("Enviando notificações de novo ticket para " + usersToNotify.size() + " usuários (helpers/admins)");
 
             for (User user : usersToNotify) {
                 try {
@@ -99,8 +94,6 @@ public class NotificationService {
                             "NEW_TICKET",
                             ticket.getId()
                     );
-                    System.out.println("Notificação enviada para: " + user.getUsername() + " (Role: " +
-                            user.getRoles().stream().map(r -> r.getName()).collect(Collectors.joining(", ")) + ")");
                 } catch (Exception e) {
                     System.err.println("Erro ao enviar notificação para " + user.getUsername() + ": " + e.getMessage());
                 }
@@ -132,7 +125,6 @@ public class NotificationService {
 
         String senderName = sender.getName() != null ? sender.getName() : sender.getUsername();
 
-        // Notificar o usuário solicitante (se não for o remetente)
         if (ticket.getUser() != null && !ticket.getUser().getId().equals(senderId)) {
             createNotificationForUser(
                     ticket.getUser().getId(),
@@ -142,7 +134,6 @@ public class NotificationService {
             );
         }
 
-        // Notificar o helper atribuído (se não for o remetente)
         if (ticket.getHelper() != null && !ticket.getHelper().getId().equals(senderId)) {
             createNotificationForUser(
                     ticket.getHelper().getId(),
@@ -154,7 +145,6 @@ public class NotificationService {
     }
 
     public void notifyTicketAssigned(Ticket ticket, User helper) {
-        // Notificar apenas o solicitante do ticket
         if (ticket.getUser() != null && !ticket.getUser().getId().equals(helper.getId())) {
             String helperName = helper.getName() != null ? helper.getName() : helper.getUsername();
             createNotificationForUser(
@@ -169,7 +159,6 @@ public class NotificationService {
     public void notifyTicketClosed(Ticket ticket, User closer) {
         String closerName = closer.getName() != null ? closer.getName() : closer.getUsername();
 
-        // Notificar o solicitante (se não for quem fechou)
         if (ticket.getUser() != null && !ticket.getUser().getId().equals(closer.getId())) {
             createNotificationForUser(
                     ticket.getUser().getId(),
@@ -179,7 +168,6 @@ public class NotificationService {
             );
         }
 
-        // Notificar o helper (se não for quem fechou)
         if (ticket.getHelper() != null && !ticket.getHelper().getId().equals(closer.getId())) {
             createNotificationForUser(
                     ticket.getHelper().getId(),
