@@ -90,7 +90,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/tickets/{id}/mensagens/with-image").authenticated()
                         .requestMatchers(HttpMethod.GET, "/tickets/{id}/mensagens/chat-history").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/notifications").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/notifications/unread").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/notifications/test").authenticated()
 
