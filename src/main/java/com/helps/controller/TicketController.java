@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/tickets")
@@ -28,9 +29,12 @@ public class TicketController {
     private TicketService ticketService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Ticket>>> listTickets() {
+    public ResponseEntity<ApiResponse<List<TicketListDto>>> listTickets() {
         List<Ticket> tickets = ticketService.listTickets();
-        return ResponseEntity.ok(ApiResponse.success(tickets));
+        List<TicketListDto> ticketDtos = tickets.stream()
+                .map(this::convertToListDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(ticketDtos));
     }
 
     @GetMapping("/paginated")
@@ -60,13 +64,13 @@ public class TicketController {
     }
 
     @PostMapping
-    public ResponseEntity<Ticket> openTicket(@RequestBody Ticket ticket) {
+    public ResponseEntity<TicketListDto> openTicket(@RequestBody Ticket ticket) {
         Ticket newTicket = ticketService.openTicket(ticket);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newTicket);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToListDto(newTicket));
     }
 
     @PostMapping(value = "/with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Ticket> abrirChamadoComImagem(
+    public ResponseEntity<TicketListDto> abrirChamadoComImagem(
             @RequestParam("title") String title,
             @RequestParam("description") String description,
             @RequestParam("category") String category,
@@ -74,7 +78,7 @@ public class TicketController {
 
         TicketDto ticketDto = new TicketDto(title, description, category, image);
         Ticket newTicket = ticketService.openTicketImage(ticketDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newTicket);
+        return ResponseEntity.status(HttpStatus.CREATED).body(convertToListDto(newTicket));
     }
 
     @PostMapping(value = "/new", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -101,10 +105,10 @@ public class TicketController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Ticket> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket) {
+    public ResponseEntity<TicketListDto> updateTicket(@PathVariable Long id, @RequestBody Ticket ticket) {
         try {
             Ticket updatedTicket = ticketService.updateTicket(id, ticket);
-            return ResponseEntity.ok(updatedTicket);
+            return ResponseEntity.ok(convertToListDto(updatedTicket));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
@@ -144,5 +148,29 @@ public class TicketController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(ApiResponse.error("Ticket não encontrado"));
         }
+    }
+
+    private TicketListDto convertToListDto(Ticket ticket) {
+        return new TicketListDto(
+                ticket.getId(),
+                ticket.getTitle(),
+                ticket.getDescription(),
+                ticket.getStatus(),
+                ticket.getCategory(),
+                ticket.getOpeningDate(),
+                ticket.getStartDate(),
+                ticket.getClosingDate(),
+                ticket.getImagePath(),
+                ticket.getUser() != null ? new SimpleUserDto(
+                        ticket.getUser().getId(),
+                        ticket.getUser().getUsername(),
+                        ticket.getUser().getName()
+                ) : null,
+                ticket.getHelper() != null ? new SimpleUserDto(
+                        ticket.getHelper().getId(),
+                        ticket.getHelper().getUsername(),
+                        ticket.getHelper().getName()
+                ) : null
+        );
     }
 }

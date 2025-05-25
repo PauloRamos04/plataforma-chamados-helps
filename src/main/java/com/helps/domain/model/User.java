@@ -1,5 +1,6 @@
 package com.helps.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.helps.dto.LoginRequest;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -35,35 +36,23 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserActivityLog> activityLogs = new HashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserSession> sessions = new HashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Notification> notifications = new HashSet<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST)
-    private Set<Ticket> createdTickets = new HashSet<>();
-
-    @OneToMany(mappedBy = "helper", cascade = CascadeType.PERSIST)
-    private Set<Ticket> helperTickets = new HashSet<>();
-
-    @OneToMany(mappedBy = "sender", cascade = CascadeType.PERSIST)
-    private Set<Message> sentMessages = new HashSet<>();
-
     @PreRemove
     private void preRemove() {
-        for (Ticket ticket : createdTickets) {
-            ticket.setUser(null);
-        }
-        for (Ticket ticket : helperTickets) {
-            ticket.setHelper(null);
-        }
-        for (Message message : sentMessages) {
-            message.setSender(null);
-        }
+        activityLogs.clear();
+        sessions.clear();
+        notifications.clear();
     }
 
     public Long getId() {
@@ -136,30 +125,6 @@ public class User {
 
     public void setNotifications(Set<Notification> notifications) {
         this.notifications = notifications;
-    }
-
-    public Set<Ticket> getCreatedTickets() {
-        return createdTickets;
-    }
-
-    public void setCreatedTickets(Set<Ticket> createdTickets) {
-        this.createdTickets = createdTickets;
-    }
-
-    public Set<Ticket> getHelperTickets() {
-        return helperTickets;
-    }
-
-    public void setHelperTickets(Set<Ticket> helperTickets) {
-        this.helperTickets = helperTickets;
-    }
-
-    public Set<Message> getSentMessages() {
-        return sentMessages;
-    }
-
-    public void setSentMessages(Set<Message> sentMessages) {
-        this.sentMessages = sentMessages;
     }
 
     public boolean isLoginCorrect(LoginRequest loginRequest, BCryptPasswordEncoder encoder) {

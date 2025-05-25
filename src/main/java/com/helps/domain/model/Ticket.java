@@ -1,10 +1,11 @@
 package com.helps.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "tickets")
@@ -25,6 +26,30 @@ public class Ticket {
 
     @Column(nullable = false)
     private String category;
+
+    @Column(name = "opening_date")
+    private LocalDateTime openingDate;
+
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
+
+    @Column(name = "closing_date")
+    private LocalDateTime closingDate;
+
+    @Column(name = "image_path")
+    private String imagePath;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "helper_id")
+    private User helper;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<Message> messages = new HashSet<>();
 
     public Long getId() {
         return id;
@@ -114,24 +139,11 @@ public class Ticket {
         this.helper = helper;
     }
 
+    public Set<Message> getMessages() {
+        return messages;
+    }
 
-    @Column(name = "opening_date")
-    private LocalDateTime openingDate;
-
-    @Column(name = "start_date")
-    private LocalDateTime startDate;
-
-    @Column(name = "closing_date")
-    private LocalDateTime closingDate;
-
-    @Column(name = "image_path")
-    private String imagePath;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
-    @ManyToOne
-    @JoinColumn(name = "helper_id")
-    private User helper;
+    public void setMessages(Set<Message> messages) {
+        this.messages = messages;
+    }
 }

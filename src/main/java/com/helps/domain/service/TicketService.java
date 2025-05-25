@@ -86,7 +86,6 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        // Registrar log de atividade
         activityLogService.logActivity(currentUser, "TICKET_CREATED", null,
                 "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
 
@@ -113,15 +112,12 @@ public class TicketService {
 
         Ticket updatedTicket = ticketRepository.save(ticket);
 
-        // Registrar log de atividade
         activityLogService.logActivity(helper, "TICKET_ASSIGNED", null,
                 "Assumiu chamado #" + ticket.getId() + ": " + ticket.getTitle());
 
-        // Notificar via WebSocket
         webSocketService.notifyTicketStatus(updatedTicket,
                 helper.getName() + " começou a atender este ticket");
 
-        // Notificar apenas o solicitante via sistema de notificações
         notificationService.notifyTicketAssigned(ticket, helper);
 
         return convertToResponseDto(updatedTicket);
@@ -140,15 +136,12 @@ public class TicketService {
 
         Ticket closedTicket = ticketRepository.save(ticket);
 
-        // Registrar log de atividade
         activityLogService.logActivity(currentUser, "TICKET_CLOSED", null,
                 "Finalizou chamado #" + ticket.getId() + ": " + ticket.getTitle());
 
-        // Notificar via WebSocket
         webSocketService.notifyTicketStatus(closedTicket,
                 "Ticket finalizado por " + currentUser.getName());
 
-        // Notificar participantes relevantes (exceto quem fechou)
         notificationService.notifyTicketClosed(ticket, currentUser);
     }
 
@@ -174,7 +167,6 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        // Registrar log de atividade
         activityLogService.logActivity(solicitante, "TICKET_CREATED", null,
                 "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
 
@@ -211,7 +203,6 @@ public class TicketService {
 
         Ticket savedTicket = ticketRepository.save(ticket);
 
-        // Registrar log de atividade
         activityLogService.logActivity(solicitante, "TICKET_CREATED", null,
                 "Criou chamado #" + savedTicket.getId() + ": " + savedTicket.getTitle());
 
@@ -242,7 +233,6 @@ public class TicketService {
                         ticket.setStatus(updatedTicket.getStatus());
 
                         if (!previousStatus.equals(updatedTicket.getStatus())) {
-                            // Registrar log de mudança de status
                             activityLogService.logActivity(userContextService.getCurrentUser(), "TICKET_STATUS_CHANGED", null,
                                     "Alterou status do chamado #" + ticket.getId() + " de " + previousStatus + " para " + ticket.getStatus());
 
@@ -253,7 +243,6 @@ public class TicketService {
 
                     Ticket savedTicket = ticketRepository.save(ticket);
 
-                    // Registrar log de atualização
                     activityLogService.logActivity(userContextService.getCurrentUser(), "TICKET_UPDATED", null,
                             "Atualizou chamado #" + ticket.getId() + ": " + originalTitle);
 
