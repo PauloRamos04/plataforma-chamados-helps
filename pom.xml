@@ -57,7 +57,12 @@
 			<version>2.6.8</version> <!-- Verifique a versão mais recente -->
 		</dependency>
 
-		<!-- JWT (Json Web Token) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate6</artifactId>
+        </dependency>
+
+        <!-- JWT (Json Web Token) -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt</artifactId>

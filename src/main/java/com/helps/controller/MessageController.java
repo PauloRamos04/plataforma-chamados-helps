@@ -4,42 +4,43 @@ import com.helps.domain.model.Message;
 import com.helps.domain.service.MessageService;
 import com.helps.dto.ChatMessageDto;
 import com.helps.dto.MessageDto;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.helps.dto.MessageResponseDto;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/tickets/{ticketId}/mensagens")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "false")
+@RequiredArgsConstructor
 public class MessageController {
 
-    @Autowired
-    private MessageService messageService;
-
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+    private final MessageService messageService;
 
     @GetMapping
-    public ResponseEntity<List<Message>> listMessages(@PathVariable Long ticketId) {
+    public ResponseEntity<List<MessageResponseDto>> listMessages(@PathVariable Long ticketId) {
         try {
             List<Message> messages = messageService.listMessagesByTicket(ticketId);
-            return ResponseEntity.ok(messages);
+            List<MessageResponseDto> messageDtos = messages.stream()
+                    .map(MessageResponseDto::fromEntity)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(messageDtos);
         } catch (Exception e) {
+            log.error("Error listing messages for ticket {}: {}", ticketId, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
@@ -60,10 +61,12 @@ public class MessageController {
             MessageDto messageDTO = new MessageDto(content);
             Message message = messageService.sendMessage(ticketId, messageDTO);
 
-            notifyNewMessages(ticketId, message);
+            // Retorna DTO ao invés da entidade
+            MessageResponseDto responseDto = MessageResponseDto.fromEntity(message);
+            return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(message);
         } catch (Exception e) {
+            log.error("Error sending message to ticket {}: {}", ticketId, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "error", "Bad Request",
@@ -79,7 +82,6 @@ public class MessageController {
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
         try {
-            // Validar que ao menos um dos dois (conteúdo ou imagem) está presente
             if ((content == null || content.trim().isEmpty()) && (image == null || image.isEmpty())) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of(
@@ -88,18 +90,19 @@ public class MessageController {
                         ));
             }
 
-            // Usar conteúdo padrão se apenas imagem for fornecida
             if (content == null || content.trim().isEmpty()) {
-                content = "[Imagem]"; // Texto indicativo que a mensagem contém apenas imagem
+                content = "[Imagem]";
             }
 
             MessageDto messageDTO = new MessageDto(content);
             Message message = messageService.sendMessageWithImage(ticketId, messageDTO, image);
-            notifyNewMessages(ticketId, message);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(message);
+            // Retorna DTO ao invés da entidade
+            MessageResponseDto responseDto = MessageResponseDto.fromEntity(message);
+            return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error sending message with image to ticket {}: {}", ticketId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
                             "error", "Bad Request",
@@ -111,42 +114,53 @@ public class MessageController {
     @GetMapping("/chat-history")
     public @ResponseBody List<ChatMessageDto> getChatHistory(@PathVariable Long ticketId) {
         List<Message> messages = messageService.listMessagesByTicket(ticketId);
-
         return messages.stream()
                 .map(this::convertToChatMessageDto)
                 .collect(Collectors.toList());
     }
 
     @MessageMapping("/chat.sendMessage/{ticketId}")
-    @SendTo("/topic/ticket/{ticketId}")
-    public ChatMessageDto sendMessage(
-            @DestinationVariable Long ticketId,
-            @Payload ChatMessageDto chatMessage) {
-
-        MessageDto messageDto = new MessageDto(chatMessage.content());
-        Message message = messageService.sendMessage(ticketId, messageDto);
-
-        return convertToChatMessageDto(message);
-    }
-
-    @MessageMapping("/chat.addUser/{ticketId}")
-    @SendTo("/topic/ticket/{ticketId}")
-    public ChatMessageDto addUser(
+    public void sendMessageViaWebSocket(
             @DestinationVariable Long ticketId,
             @Payload ChatMessageDto chatMessage,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        headerAccessor.getSessionAttributes().put("username", chatMessage.senderName());
-        headerAccessor.getSessionAttributes().put("ticketId", ticketId);
+        try {
+            String sessionId = headerAccessor.getSessionId();
+            headerAccessor.getSessionAttributes().put("ticketId", ticketId);
+            headerAccessor.getSessionAttributes().put("userId", chatMessage.senderId());
+            headerAccessor.getSessionAttributes().put("username", chatMessage.senderName());
 
-        return new ChatMessageDto(
-                "JOIN",
-                ticketId,
-                chatMessage.senderId(),
-                chatMessage.senderName(),
-                chatMessage.senderName() + " joined the chat",
-                LocalDateTime.now()
-        );
+            MessageDto messageDto = new MessageDto(chatMessage.content());
+            messageService.sendMessage(ticketId, messageDto);
+
+            log.debug("WebSocket message processed: user={} ticket={} session={}",
+                    chatMessage.senderName(), ticketId, sessionId);
+
+        } catch (Exception e) {
+            log.error("Error processing WebSocket message: user={} ticket={} error={}",
+                    chatMessage.senderName(), ticketId, e.getMessage());
+        }
+    }
+
+    @MessageMapping("/chat.addUser/{ticketId}")
+    public void addUser(
+            @DestinationVariable Long ticketId,
+            @Payload ChatMessageDto chatMessage,
+            SimpMessageHeaderAccessor headerAccessor) {
+
+        try {
+            headerAccessor.getSessionAttributes().put("username", chatMessage.senderName());
+            headerAccessor.getSessionAttributes().put("ticketId", ticketId);
+            headerAccessor.getSessionAttributes().put("userId", chatMessage.senderId());
+
+            log.debug("User joined chat: user={} ticket={} session={}",
+                    chatMessage.senderName(), ticketId, headerAccessor.getSessionId());
+
+        } catch (Exception e) {
+            log.error("Error adding user to chat: user={} ticket={} error={}",
+                    chatMessage.senderName(), ticketId, e.getMessage());
+        }
     }
 
     private String extractContent(Map<String, Object> requestBody) {
@@ -160,11 +174,6 @@ public class MessageController {
             return (String) requestBody.get("texto");
         }
         return null;
-    }
-
-    private void notifyNewMessages(Long ticketId, Message message) {
-        ChatMessageDto chatMessage = convertToChatMessageDto(message);
-        messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, chatMessage);
     }
 
     private ChatMessageDto convertToChatMessageDto(Message message) {

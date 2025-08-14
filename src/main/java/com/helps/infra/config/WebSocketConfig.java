@@ -3,6 +3,7 @@ package com.helps.infra.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -22,6 +23,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         String[] allowedOrigins = websocketAllowedOrigins.split(",");
 
+        // Endpoint com SockJS
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS()
@@ -29,39 +31,61 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setHeartbeatTime(25000)
                 .setDisconnectDelay(30000)
                 .setStreamBytesLimit(512 * 1024)
-                .setHttpMessageCacheSize(1000)
-                .setClientLibraryUrl("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js");
+                .setHttpMessageCacheSize(1000);
 
+        // Endpoint WebSocket nativo
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns(allowedOrigins);
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
+        // Configuração mais robusta do broker
         registry.enableSimpleBroker("/topic", "/queue", "/user")
-                .setHeartbeatValue(new long[]{10000, 20000})
+                .setHeartbeatValue(new long[]{30000, 30000}) // Aumentado para evitar desconexões
                 .setTaskScheduler(heartBeatScheduler());
 
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
-        registry.setPreservePublishOrder(true);
+        registry.setPreservePublishOrder(true); // Mantém ordem das mensagens
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Pool de threads para processar mensagens recebidas
+        registration.taskExecutor()
+                .corePoolSize(4)
+                .maxPoolSize(16)
+                .queueCapacity(500)
+                .keepAliveSeconds(60);
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        // Pool de threads para enviar mensagens
+        registration.taskExecutor()
+                .corePoolSize(4)
+                .maxPoolSize(16)
+                .queueCapacity(500)
+                .keepAliveSeconds(60);
     }
 
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
-        registration.setMessageSizeLimit(256 * 1024)
-                .setSendBufferSizeLimit(1024 * 1024)
-                .setSendTimeLimit(20000)
-                .setTimeToFirstMessage(30000);
+        registration.setMessageSizeLimit(512 * 1024) // Aumentado para imagens
+                .setSendBufferSizeLimit(2 * 1024 * 1024) // Buffer maior
+                .setSendTimeLimit(30000) // Mais tempo para envio
+                .setTimeToFirstMessage(60000); // Mais tempo para primeira mensagem
     }
 
     @Bean
     public TaskScheduler heartBeatScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
+        scheduler.setPoolSize(2); // Aumentado
         scheduler.setThreadNamePrefix("wss-heartbeat-");
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(30);
+        scheduler.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
         scheduler.initialize();
         return scheduler;
     }
