@@ -42,9 +42,6 @@ public class InMemoryWebSocketSessionRegistry implements WebSocketSessionRegistr
         });
 
         sessionToUser.put(cleanSessionId, cleanUsername);
-        
-        log.debug("Sessão adicionada: user={} session={} totalSessions={}", 
-                cleanUsername, cleanSessionId, getTotalActiveSessions());
     }
 
     @Override
@@ -66,9 +63,6 @@ public class InMemoryWebSocketSessionRegistry implements WebSocketSessionRegistr
 
         // Remove da mapping sessionId -> username
         sessionToUser.remove(cleanSessionId);
-        
-        log.debug("Sessão removida: user={} session={} totalSessions={}", 
-                cleanUsername, cleanSessionId, getTotalActiveSessions());
     }
 
     @Override
@@ -127,7 +121,6 @@ public class InMemoryWebSocketSessionRegistry implements WebSocketSessionRegistr
         if (sessions != null) {
             // Remove todas as sessões do mapeamento reverso
             sessions.forEach(sessionToUser::remove);
-            log.debug("Todas as sessões removidas para usuário: {} (total: {})", cleanUsername, sessions.size());
         }
     }
 
@@ -145,6 +138,6 @@ public class InMemoryWebSocketSessionRegistry implements WebSocketSessionRegistr
     public void clearAll() {
         userSessions.clear();
         sessionToUser.clear();
-        log.info("Todas as sessões WebSocket foram removidas do registry");
+        log.warn("Todas as sessões WebSocket foram removidas do registry");
     }
 }

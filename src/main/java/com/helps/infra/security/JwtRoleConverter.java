@@ -1,5 +1,6 @@
 package com.helps.infra.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -11,20 +12,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+@Slf4j
 public class JwtRoleConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     @Override
     public AbstractAuthenticationToken convert(Jwt jwt) {
         Collection<GrantedAuthority> authorities = extractAuthorities(jwt);
-
-        System.out.println("JWT autenticado:");
-        System.out.println("- Subject: " + jwt.getSubject());
-        System.out.println("- Authorities: " + authorities.stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(", ")));
-
         return new JwtAuthenticationToken(jwt, authorities, jwt.getSubject());
     }
 
@@ -41,7 +35,7 @@ public class JwtRoleConverter implements Converter<Jwt, AbstractAuthenticationTo
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Erro ao extrair roles do JWT: " + e.getMessage());
+                log.error("Erro ao extrair roles do JWT: {}", e.getMessage());
             }
         }
 
@@ -64,7 +58,7 @@ public class JwtRoleConverter implements Converter<Jwt, AbstractAuthenticationTo
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Erro ao extrair authorities do JWT: " + e.getMessage());
+                log.error("Erro ao extrair authorities do JWT: {}", e.getMessage());
             }
         }
 
@@ -80,7 +74,7 @@ public class JwtRoleConverter implements Converter<Jwt, AbstractAuthenticationTo
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Erro ao extrair realm_access do JWT: " + e.getMessage());
+                log.error("Erro ao extrair realm_access do JWT: {}", e.getMessage());
             }
         }
 

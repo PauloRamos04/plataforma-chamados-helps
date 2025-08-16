@@ -39,10 +39,6 @@ public class WebSocketService {
 
             String destination = "/topic/ticket/" + ticketId;
             messagingTemplate.convertAndSend(destination, chatMessage);
-            
-            log.debug("Chat message sent to {}: user={} content={}",
-                    destination, sender.getUsername(), 
-                    message.getContent().substring(0, Math.min(50, message.getContent().length())));
                     
         } catch (MessagingException e) {
             log.error("Failed to send chat message for ticket {}: {}", 
@@ -61,7 +57,6 @@ public class WebSocketService {
 
         try {
             messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/notifications", notification);
-            log.debug("Notification sent to user {}: {}", user.getUsername(), notification.message());
             
         } catch (MessagingException e) {
             log.error("Failed to send notification to user {}: {}", user.getUsername(), e.getMessage());
@@ -130,7 +125,6 @@ public class WebSocketService {
             );
 
             messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, joinMessage);
-            log.debug("User entry notification sent: user={} ticket={}", username, ticketId);
             
         } catch (MessagingException e) {
             log.error("Failed to notify user entry: user={} ticket={} error={}", username, ticketId, e.getMessage());
@@ -152,7 +146,6 @@ public class WebSocketService {
             );
 
             messagingTemplate.convertAndSend("/topic/ticket/" + ticketId, leaveMessage);
-            log.debug("User exit notification sent: user={} ticket={}", username, ticketId);
             
         } catch (MessagingException e) {
             log.error("Failed to notify user exit: user={} ticket={} error={}", username, ticketId, e.getMessage());
@@ -165,7 +158,6 @@ public class WebSocketService {
     public void sendGlobalNotification(NotificationDto notification) {
         try {
             messagingTemplate.convertAndSend("/topic/notifications", notification);
-            log.debug("Global notification sent: {}", notification.message());
             
         } catch (MessagingException e) {
             log.error("Failed to send global notification: {}", e.getMessage());
