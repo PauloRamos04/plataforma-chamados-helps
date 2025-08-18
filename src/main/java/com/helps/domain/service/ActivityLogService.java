@@ -208,27 +208,19 @@ public class ActivityLogService {
         Long totalSessions = sessionRepository.count();
         Long activeSessions = sessionRepository.countActiveSessions();
 
-        List<UserActivityLog> logins24h = activityLogRepository.findByActivityAndCreatedAtAfter("LOGIN", oneDayAgo);
-        Long totalLogins24h = (long) logins24h.size();
+        // Otimização: usar contagem direta em vez de carregar todos os logs
+        Long totalLogins24h = activityLogRepository.countByActivityAndCreatedAtAfter("LOGIN", oneDayAgo);
+        Long uniqueUsers24h = activityLogRepository.countDistinctUserByActivityAndCreatedAtAfter("LOGIN", oneDayAgo);
 
-        Map<String, Long> loginsByHour = logins24h.stream()
-                .collect(Collectors.groupingBy(
-                        log -> String.valueOf(log.getCreatedAt().getHour()),
-                        Collectors.counting()
-                ));
-
-        List<UserActivityLog> activities24h = activityLogRepository.findByDateRange(oneDayAgo, now, Pageable.unpaged()).getContent();
-        Map<String, Long> activitiesByType = activities24h.stream()
-                .collect(Collectors.groupingBy(
-                        log -> getReadableActivityName(log.getActivity()),
-                        Collectors.counting()
-                ));
+        // Otimização: usar consultas específicas para agregações
+        Map<String, Long> loginsByHour = convertToLoginsByHour(activityLogRepository.findLoginsByHourRaw(oneDayAgo));
+        Map<String, Long> activitiesByType = convertToActivitiesByType(activityLogRepository.findActivitiesByTypeRaw(oneDayAgo, now));
 
         return new ActivityStatsDto(
                 totalSessions,
                 activeSessions,
                 totalLogins24h,
-                (long) logins24h.stream().map(log -> log.getUser().getId()).collect(Collectors.toSet()).size(),
+                uniqueUsers24h,
                 activeSessions,
                 loginsByHour,
                 activitiesByType
@@ -275,6 +267,32 @@ public class ActivityLogService {
 
     private LocalDateTime getCurrentBrazilTime() {
         return LocalDateTime.now(BRAZIL_ZONE);
+    }
+
+    /**
+     * Converte resultado da consulta para Map de logins por hora
+     */
+    private Map<String, Long> convertToLoginsByHour(List<Object[]> results) {
+        Map<String, Long> loginsByHour = new HashMap<>();
+        for (Object[] result : results) {
+            String hour = String.valueOf(result[0]);
+            Long count = (Long) result[1];
+            loginsByHour.put(hour, count);
+        }
+        return loginsByHour;
+    }
+
+    /**
+     * Converte resultado da consulta para Map de atividades por tipo
+     */
+    private Map<String, Long> convertToActivitiesByType(List<Object[]> results) {
+        Map<String, Long> activitiesByType = new HashMap<>();
+        for (Object[] result : results) {
+            String activity = (String) result[0];
+            Long count = (Long) result[1];
+            activitiesByType.put(getReadableActivityName(activity), count);
+        }
+        return activitiesByType;
     }
 
     private String formatActivityMessage(String activity, User user, String additionalInfo) {

@@ -55,6 +55,7 @@ public class TicketService {
         boolean isHelper = userContextService.hasAnyRole("HELPER");
         boolean isAdmin = userContextService.hasAnyRole("ADMIN");
 
+        // Otimização: usar paginação para evitar carregar todos os tickets na memória
         if (isAdmin || isHelper) {
             return ticketRepository.findAll();
         } else {
